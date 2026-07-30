@@ -4,7 +4,7 @@ type GenerateGroundedQuizInput = {
   sourceTitle: string;
   sourceText: string;
   learnerIntent?: string;
-  questionCount: 4 | 6 | 8;
+  questionCount: number;
   traceId: string;
 };
 

@@ -81,6 +81,19 @@ export type SlideCatalogEntry = {
   relativePath: string;
 };
 
+export type QuizAttempt = {
+  id: string;
+  sourceFileName: string;
+  sourcePage: number;
+  questionCount: number;
+  score: number;
+  total: number;
+  completedAtLabel: string;
+  questions: QuizQuestion[];
+  answers: Record<string, string>;
+  flagged: Record<string, string>;
+};
+
 export type TutorMessage = {
   id: string;
   role: TutorRole;
@@ -109,8 +122,10 @@ export type DemoState = {
   rightPanelCollapsed: boolean;
   scenario: QuizScenario;
   processingStage: ProcessingStage;
-  quizQuestionCount: 4 | 6 | 8;
+  quizQuestionCount: number;
+  learnerIntent: string;
   generatedQuestions: QuizQuestion[];
+  quizAttempts: QuizAttempt[];
   currentQuestionIndex: number;
   answers: Record<string, string>;
   feedbackOpenFor: string | null;

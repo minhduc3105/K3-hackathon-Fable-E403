@@ -2,284 +2,97 @@
 
 import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getMaterial, initialState } from "../model/quiz-machine";
-import type { DemoState, GenerateQuizResult, QuizScenario, SlideCatalogEntry } from "../model/types";
-import { LessonSidebar, TutorSidebar } from "./sidebars";
-import { LessonScreen, ProcessingScreen, QuizScreen, ReviewScreen, SimpleEmptyScreen } from "./flow-screens";
-import { Topbar } from "./topbar";
+import { ArrowLeft, BookOpenText, CaretLeft, CaretRight, ChatCircleDots, Check, CheckCircle, CornersOut, DownloadSimple, FilePdf, Minus, Moon, PaperPlaneRight, Plus, Robot, Sparkle, Sun, X } from "@phosphor-icons/react";
+import { getMaterial, initialState, scoreQuiz } from "../model/quiz-machine";
+import type { DemoState, GenerateQuizResult, QuizAttempt, QuizQuestion, QuizScenario, SlideCatalogEntry } from "../model/types";
 
-type WorkbenchProps = {
-  courseId: string;
-  lectureId: string;
-  materialId: string;
-  slideCatalog: SlideCatalogEntry[];
-  demoScenario?: QuizScenario;
+type Props = { courseId: string; lectureId: string; materialId: string; slideCatalog: SlideCatalogEntry[]; demoScenario?: QuizScenario };
+type Panel = "materials" | "tutor";
+const MIN_LEFT = 224, MIN_RIGHT = 280, MAX_PANEL = 400, MIN_MAIN = 440, GUTTER = 16;
+const clamp = (value: number, min: number, max = MAX_PANEL) => Math.min(max, Math.max(min, value));
+const bytes = (value: number) => value < 1024 ? `${value} B` : value < 1048576 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1048576).toFixed(1)} MB`;
+const learningAssessment = (score: number, total: number) => {
+  const ratio = total ? score / total : 0;
+  if (ratio >= 0.85) return "Nắm vững: bạn nhớ tốt các ý chính. Hãy thử áp dụng vào một tình huống mới.";
+  if (ratio >= 0.6) return "Đang tiến bộ: xem lại các câu sai và phần nguồn đi kèm trước khi làm lại.";
+  return "Cần ôn thêm: quay lại slide nguồn, chọn một phần kiến thức cụ thể rồi tạo bộ câu hỏi mới.";
 };
+const reviewPriorities = (questions: QuizQuestion[], answers: Record<string, string>) => questions
+  .filter((question) => answers[question.id] !== question.correctChoiceId)
+  .map((question) => ({ slide: question.source.pageOrSlide, excerpt: question.source.excerpt }))
+  .filter((item, index, items) => items.findIndex((candidate) => candidate.slide === item.slide && candidate.excerpt === item.excerpt) === index)
+  .slice(0, 3);
 
-const LEFT_PANEL_MIN = 216;
-const RIGHT_PANEL_MIN = 264;
-const PANEL_MAX = 440;
-
-function clamp(value: number, min: number, max = PANEL_MAX) {
-  return Math.min(max, Math.max(min, value));
+function useCompact() {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => { const query = window.matchMedia("(max-width: 1080px)"); const sync = () => setCompact(query.matches); sync(); query.addEventListener("change", sync); return () => query.removeEventListener("change", sync); }, []);
+  return compact;
 }
 
-export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog, demoScenario = "normal" }: WorkbenchProps) {
-  const initialMaterial = useMemo(() => getMaterial(materialId), [materialId]);
-  const [state, setState] = useState<DemoState>(() => ({
-    ...initialState,
-    activeMaterialId: initialMaterial.id,
-    currentPage: 1,
-    selectedSourceFile: slideCatalog[0]?.fileName ?? null,
-  }));
-  const generationController = useRef<AbortController | null>(null);
-  const tutorTimer = useRef<number | null>(null);
-  const activeSource = slideCatalog.find((file) => file.fileName === state.selectedSourceFile) ?? slideCatalog[0] ?? {
-    fileName: "Học liệu PDF",
-    sizeBytes: 0,
-    pageCount: 1,
-    relativePath: "",
+export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog, demoScenario = "normal" }: Props) {
+  const material = useMemo(() => getMaterial(materialId), [materialId]);
+  const compact = useCompact();
+  const [drawer, setDrawer] = useState<Panel | null>(null);
+  const [state, setState] = useState<DemoState>(() => ({ ...initialState, activeMaterialId: material.id, currentPage: 1, selectedSourceFile: slideCatalog[0]?.fileName ?? null }));
+  const controller = useRef<AbortController | null>(null);
+  const source = slideCatalog.find((item) => item.fileName === state.selectedSourceFile) ?? slideCatalog[0] ?? { fileName: "Học liệu PDF", sizeBytes: 0, pageCount: 1, relativePath: "" };
+  const sourceUrl = `/api/slides/${encodeURIComponent(source.fileName)}`;
+  const css = { "--left-width": `${state.leftPanelCollapsed ? 56 : state.leftPanelWidth}px`, "--right-width": `${state.rightPanelCollapsed ? 56 : state.rightPanelWidth}px` } as CSSProperties;
+  const patch = (next: Partial<DemoState>) => setState((current) => ({ ...current, ...next }));
+  const focusMain = () => window.requestAnimationFrame(() => document.querySelector<HTMLElement>("#main-content")?.focus());
+
+  useEffect(() => { document.documentElement.dataset.theme = state.theme; }, [state.theme]);
+  useEffect(() => { if (!compact) setDrawer(null); }, [compact]);
+  useEffect(() => { if (!drawer) return; const close = (event: globalThis.KeyboardEvent) => event.key === "Escape" && setDrawer(null); window.addEventListener("keydown", close); window.requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-close="${drawer}"]`)?.focus()); return () => window.removeEventListener("keydown", close); }, [drawer]);
+  useEffect(() => () => controller.current?.abort(), []);
+
+  const backToLesson = (page = state.currentPage) => { controller.current?.abort(); controller.current = null; patch({ screen: "lesson", currentPage: Math.max(1, Math.min(source.pageCount, page)), errorMessage: "" }); focusMain(); };
+  const complete = () => {
+    const score = scoreQuiz(state.generatedQuestions, state.answers);
+    const attempt: QuizAttempt = { id: `attempt-${Date.now()}`, sourceFileName: source.fileName, sourcePage: state.currentPage, questionCount: state.generatedQuestions.length, score, total: state.generatedQuestions.length, completedAtLabel: new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(new Date()), questions: state.generatedQuestions, answers: state.answers, flagged: state.flagged };
+    setState((current) => ({ ...current, screen: "review", quizAttempts: [attempt, ...current.quizAttempts].slice(0, 5), notice: `Đánh giá tiếp thu: ${learningAssessment(score, attempt.total)}` })); focusMain();
   };
-  const sourceFileName = activeSource?.fileName ?? "Học liệu PDF";
-  const sourcePageCount = activeSource?.pageCount ?? 1;
-  const sourceUrl = `/api/slides/${encodeURIComponent(sourceFileName)}`;
-  const layoutStyle = {
-    "--left-panel-width": `${state.leftPanelCollapsed ? 56 : state.leftPanelWidth}px`,
-    "--right-panel-width": `${state.rightPanelCollapsed ? 56 : state.rightPanelWidth}px`,
-  } as CSSProperties;
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = state.theme;
-  }, [state.theme]);
-
-  useEffect(() => {
-    document.querySelector<HTMLElement>("#main-content")?.focus();
-  }, [state.screen]);
-
-  useEffect(() => () => {
-    generationController.current?.abort();
-    if (tutorTimer.current) window.clearTimeout(tutorTimer.current);
-  }, []);
-
-  const updateState = (patch: Partial<DemoState>, moveFocus = false) => {
-    setState((current) => ({ ...current, ...patch }));
-    if (moveFocus) window.requestAnimationFrame(() => document.querySelector<HTMLElement>("#main-content")?.focus());
+  const generate = async () => {
+    if (controller.current) return;
+    if (demoScenario === "insufficient") { patch({ screen: "insufficient", errorMessage: "Học liệu này chưa có đủ nội dung chữ rõ ràng để tạo câu hỏi có căn cứ." }); focusMain(); return; }
+    if (demoScenario === "failure") { patch({ screen: "error", errorMessage: "Không thể trích xuất nội dung từ học liệu trong lần này." }); focusMain(); return; }
+    const next = new AbortController(); controller.current = next; patch({ screen: "processing", processingStage: 0, generatedQuestions: [], answers: {}, currentQuestionIndex: 0, errorMessage: "" });
+    try { patch({ processingStage: 1 }); const response = await fetch("/api/quiz/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sourceFileName: source.fileName, questionCount: state.quizQuestionCount, learnerIntent: state.learnerIntent }), signal: next.signal }); const result = await response.json() as GenerateQuizResult; patch({ processingStage: 2 });
+      if (result.status === "ready") { patch({ screen: "quiz", generatedQuestions: result.questions, currentQuestionIndex: 0, notice: `Đã tạo ${result.questions.length} câu hỏi từ học liệu đang mở.` }); focusMain(); }
+      else { patch({ screen: result.status === "insufficient_content" || result.status === "out_of_scope" ? "insufficient" : "error", errorMessage: result.reason }); focusMain(); }
+    } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) { patch({ screen: "error", errorMessage: error instanceof Error ? error.message : "Không thể tạo câu hỏi lúc này." }); focusMain(); } } finally { controller.current = null; }
   };
+  const toggle = (panel: Panel) => { if (compact) { setDrawer((current) => current === panel ? null : panel); return; } patch(panel === "materials" ? { leftPanelCollapsed: !state.leftPanelCollapsed } : { rightPanelCollapsed: !state.rightPanelCollapsed }); };
+  const resize = (panel: Panel, event: PointerEvent<HTMLDivElement>) => { if (compact || event.button !== 0) return; event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); document.body.classList.add("is-resizing"); const start = event.clientX, initial = panel === "materials" ? state.leftPanelWidth : state.rightPanelWidth, other = panel === "materials" ? (state.rightPanelCollapsed ? 56 : state.rightPanelWidth) : (state.leftPanelCollapsed ? 56 : state.leftPanelWidth), min = panel === "materials" ? MIN_LEFT : MIN_RIGHT, max = Math.max(min, Math.min(MAX_PANEL, window.innerWidth - other - MIN_MAIN - GUTTER)); const move = (moveEvent: globalThis.PointerEvent) => { if ((moveEvent.buttons & 1) === 0) return stop(); const value = clamp(panel === "materials" ? initial + moveEvent.clientX - start : initial - moveEvent.clientX + start, min, max); patch(panel === "materials" ? { leftPanelWidth: value, leftPanelCollapsed: false } : { rightPanelWidth: value, rightPanelCollapsed: false }); }; const stop = () => { document.body.classList.remove("is-resizing"); window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", stop); window.removeEventListener("pointercancel", stop); }; window.addEventListener("pointermove", move); window.addEventListener("pointerup", stop, { once: true }); window.addEventListener("pointercancel", stop, { once: true }); };
+  const resizeKeys = (panel: Panel, event: KeyboardEvent<HTMLDivElement>) => { if (compact || !["ArrowLeft", "ArrowRight"].includes(event.key)) return; event.preventDefault(); const delta = event.key === "ArrowRight" ? 20 : -20; patch(panel === "materials" ? { leftPanelWidth: clamp(state.leftPanelWidth + delta, MIN_LEFT), leftPanelCollapsed: false } : { rightPanelWidth: clamp(state.rightPanelWidth - delta, MIN_RIGHT), rightPanelCollapsed: false }); };
+  const lessonCollapsed = compact ? drawer !== "materials" : state.leftPanelCollapsed, tutorCollapsed = compact ? drawer !== "tutor" : state.rightPanelCollapsed;
 
-  const backToLesson = (page = state.currentPage) => {
-    generationController.current?.abort();
-    generationController.current = null;
-    updateState({ screen: "lesson", currentPage: Math.min(sourcePageCount, Math.max(1, page)), processingStage: 0, errorMessage: "" }, true);
-  };
-
-  const startProcessing = async () => {
-    if (generationController.current) return;
-
-    const controller = new AbortController();
-    generationController.current = controller;
-    updateState({
-      screen: "processing",
-      processingStage: 0,
-      scenario: "normal",
-      answers: {},
-      generatedQuestions: [],
-      currentQuestionIndex: 0,
-      errorMessage: "",
-    });
-
-    if (demoScenario === "insufficient") {
-      updateState({
-        screen: "insufficient",
-        scenario: "insufficient",
-        errorMessage: `Kịch bản demo: học liệu có quá ít chữ rõ ràng để tạo đủ ${state.quizQuestionCount} câu hỏi có căn cứ.`,
-      }, true);
-      generationController.current = null;
-      return;
-    }
-
-    if (demoScenario === "failure") {
-      updateState({
-        screen: "error",
-        scenario: "failure",
-        errorMessage: "Kịch bản demo: bước trích xuất học liệu thất bại. Nguồn đã chọn vẫn được giữ để thử lại.",
-      }, true);
-      generationController.current = null;
-      return;
-    }
-
-    try {
-      setState((current) => ({ ...current, processingStage: 1 }));
-      const response = await fetch("/api/quiz/generate", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          sourceFileName,
-          sourcePage: state.currentPage,
-          questionCount: state.quizQuestionCount,
-        }),
-        signal: controller.signal,
-      });
-      const result = await response.json() as GenerateQuizResult;
-      setState((current) => ({ ...current, processingStage: 2 }));
-
-      if (result.status === "ready") {
-        updateState({
-          screen: "quiz",
-          generatedQuestions: result.questions,
-          currentQuestionIndex: 0,
-          answers: {},
-          notice: `AI đã tạo ${result.questions.length} câu có căn cứ. Trace: ${result.traceId.slice(0, 8)}`,
-        }, true);
-        return;
-      }
-
-      if (result.status === "insufficient_content" || result.status === "out_of_scope") {
-        updateState({
-          screen: "insufficient",
-          errorMessage: result.reason,
-        }, true);
-        return;
-      }
-
-      updateState({
-        screen: "error",
-        errorMessage: result.reason,
-      }, true);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      updateState({
-        screen: "error",
-        errorMessage: error instanceof Error ? error.message : "Không thể gọi AI để tạo câu hỏi.",
-      }, true);
-    } finally {
-      generationController.current = null;
-    }
-  };
-
-  const selectSourceFile = (fileName: string) => {
-    updateState({ selectedSourceFile: fileName, currentPage: 1, screen: "lesson", answers: {}, currentQuestionIndex: 0, notice: `Đã mở ${fileName}` });
-  };
-
-  const downloadMaterial = () => {
-    const link = document.createElement("a");
-    link.href = sourceUrl;
-    link.download = sourceFileName;
-    link.click();
-  };
-
-  const sendTutorMessage = () => {
-    const question = state.tutorDraft.trim();
-    if (!question) {
-      updateState({ notice: "Hãy nhập câu hỏi trước khi gửi cho Tutor." });
-      return;
-    }
-    if (tutorTimer.current) window.clearTimeout(tutorTimer.current);
-    setState((current) => ({ ...current, tutorMessages: [...current.tutorMessages, { id: `student-${Date.now()}`, role: "student", text: question }], tutorDraft: "", tutorHistoryOpen: false }));
-    tutorTimer.current = window.setTimeout(() => {
-      setState((current) => ({ ...current, tutorMessages: [...current.tutorMessages, { id: `tutor-${Date.now()}`, role: "tutor", text: `Mình đang bám theo ${sourceFileName}, trang ${state.currentPage}. Bạn có thể tạo quiz để tự kiểm tra phần vừa xem.` }] }));
-    }, 500);
-  };
-
-  const resizePanel = (panel: "left" | "right", event: PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const startX = event.clientX;
-    const startWidth = panel === "left" ? state.leftPanelWidth : state.rightPanelWidth;
-    const min = panel === "left" ? LEFT_PANEL_MIN : RIGHT_PANEL_MIN;
-    const move = (moveEvent: globalThis.PointerEvent) => {
-      const delta = moveEvent.clientX - startX;
-      const width = panel === "left" ? startWidth + delta : startWidth - delta;
-      setState((current) => panel === "left"
-        ? { ...current, leftPanelWidth: clamp(width, min), leftPanelCollapsed: false }
-        : { ...current, rightPanelWidth: clamp(width, min), rightPanelCollapsed: false });
-    };
-    const stop = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", stop);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", stop, { once: true });
-  };
-
-  const resizeWithKeyboard = (panel: "left" | "right", event: KeyboardEvent<HTMLDivElement>) => {
-    if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-    event.preventDefault();
-    const direction = event.key === "ArrowRight" ? 16 : -16;
-    setState((current) => panel === "left"
-      ? { ...current, leftPanelWidth: clamp(current.leftPanelWidth + direction, LEFT_PANEL_MIN), leftPanelCollapsed: false }
-      : { ...current, rightPanelWidth: clamp(current.rightPanelWidth - direction, RIGHT_PANEL_MIN), rightPanelCollapsed: false });
-  };
-
-  return (
-    <div className={`app-shell app-screen-${state.screen}`} style={layoutStyle}>
-      <Topbar
-        state={state}
-        materialName={sourceFileName}
-        lectureId={lectureId}
-        onBack={() => state.screen === "lesson" ? updateState({ notice: "Bạn đang ở màn hình reader của học liệu." }) : backToLesson()}
-        onToggleLanguage={() => updateState({
-          language: state.language === "vi" ? "en" : "vi",
-          profileOpen: false,
-          notice: state.language === "vi" ? "Language switched to English." : "Đã chuyển sang tiếng Việt.",
-        })}
-        onToggleTheme={() => updateState({ theme: state.theme === "light" ? "dark" : "light" })}
-        onToggleProfile={() => updateState({ profileOpen: !state.profileOpen })}
-        onCloseProfile={() => updateState({ profileOpen: false })}
-      />
-      <div className="reader-layout">
-        <LessonSidebar
-          sourceFiles={slideCatalog}
-          onSelectSourceFile={selectSourceFile}
-          activeSourceFile={activeSource?.fileName}
-          collapsed={state.leftPanelCollapsed}
-          onToggleCollapsed={() => updateState({ leftPanelCollapsed: !state.leftPanelCollapsed })}
-        />
-        <div className="panel-resizer" role="separator" aria-orientation="vertical" aria-label="Đổi độ rộng học liệu" aria-valuenow={state.leftPanelWidth} tabIndex={0} onPointerDown={(event) => resizePanel("left", event)} onKeyDown={(event) => resizeWithKeyboard("left", event)} />
-        <main className="reader-main" id="main-content" tabIndex={-1}>
-          {state.screen !== "lesson" ? <div className="breadcrumb"><span>Khóa học</span><span aria-hidden="true">/</span><span>{courseId.toUpperCase()}</span><span aria-hidden="true">/</span><span className="breadcrumb-current">{state.screen === "processing" ? "Đang tạo câu hỏi" : state.screen === "quiz" ? "Làm bài kiểm tra" : state.screen === "review" ? "Kết quả" : state.screen === "insufficient" ? "Chưa đủ nội dung" : "Lỗi xử lý"}</span></div> : null}
-          {state.screen === "lesson" ? <LessonScreen state={state} sourceFile={activeSource} sourceUrl={sourceUrl} onZoomOut={() => updateState({ zoom: Math.max(70, state.zoom - 10) })} onZoomIn={() => updateState({ zoom: Math.min(150, state.zoom + 10) })} onFitPage={() => updateState({ zoom: 90 })} onDownloadMaterial={downloadMaterial} onOpenMaterialWindow={() => window.open(sourceUrl, "_blank", "noopener,noreferrer")} onPreviousPage={() => updateState({ currentPage: Math.max(1, state.currentPage - 1) })} onNextPage={() => updateState({ currentPage: Math.min(sourcePageCount, state.currentPage + 1) })} /> : null}
-          {state.screen === "processing" ? <ProcessingScreen state={state} sourceFileName={sourceFileName} onCancelProcessing={() => backToLesson()} /> : null}
-          {state.screen === "quiz" ? (
-            <QuizScreen
-              state={state}
-              sourceFileName={sourceFileName}
-              onSelectAnswer={(value) => {
-                const question = state.generatedQuestions[state.currentQuestionIndex];
-                if (!question) return;
-                updateState({ answers: { ...state.answers, [question.id]: value } });
-              }}
-              onPreviousQuestion={() => updateState({ currentQuestionIndex: Math.max(0, state.currentQuestionIndex - 1) })}
-              onSkipQuestion={() => state.currentQuestionIndex < state.generatedQuestions.length - 1
-                ? updateState({ currentQuestionIndex: state.currentQuestionIndex + 1 })
-                : updateState({ screen: "review" })}
-              onNextQuestion={() => state.currentQuestionIndex < state.generatedQuestions.length - 1
-                ? updateState({ currentQuestionIndex: state.currentQuestionIndex + 1 })
-                : updateState({ screen: "review" })}
-            />
-          ) : null}
-          {state.screen === "review" ? <ReviewScreen state={state} sourceFileName={sourceFileName} onRetryQuiz={() => updateState({ screen: "quiz", currentQuestionIndex: 0, answers: {}, flagged: {} })} onBackToLesson={() => backToLesson()} onOpenFeedback={(questionId) => updateState({ feedbackOpenFor: questionId })} onFlagFeedback={(questionId, reason) => updateState({ flagged: { ...state.flagged, [questionId]: reason }, feedbackOpenFor: null })} onJumpToSource={(page) => backToLesson(page)} /> : null}
-          {state.screen === "insufficient" ? <SimpleEmptyScreen notice="Không đủ căn cứ" title="Chưa đủ nội dung để tạo câu hỏi" body={state.errorMessage || `${sourceFileName} chủ yếu là hình ảnh hoặc có quá ít chữ rõ ràng.`} actionLabel="Quay lại học liệu" onAction={() => backToLesson()} /> : null}
-          {state.screen === "error" ? <SimpleEmptyScreen notice="Chưa hoàn tất" title="Không thể tạo bộ câu hỏi lúc này" body={state.errorMessage || `Không thể xử lý ${sourceFileName} trong lần này.`} actionLabel="Thử lại" onAction={startProcessing} /> : null}
-        </main>
-        <div className="panel-resizer" role="separator" aria-orientation="vertical" aria-label="Đổi độ rộng VLearn Tutor" aria-valuenow={state.rightPanelWidth} tabIndex={0} onPointerDown={(event) => resizePanel("right", event)} onKeyDown={(event) => resizeWithKeyboard("right", event)} />
-        <TutorSidebar
-          state={state}
-          sourceFileName={sourceFileName}
-          currentPage={state.currentPage}
-          tutorMessages={state.tutorMessages}
-          tutorDraft={state.tutorDraft}
-          onToggleHistory={() => updateState({ tutorHistoryOpen: !state.tutorHistoryOpen })}
-          onNewChat={() => updateState({ tutorMessages: [], tutorHistoryOpen: false, tutorDraft: "", notice: "Đã tạo cuộc hội thoại mới." })}
-          onRestoreChat={(label) => updateState({ tutorMessages: [...initialState.tutorMessages, { id: `restored-${Date.now()}`, role: "student", text: label }], tutorHistoryOpen: false })}
-          onTutorDraftChange={(value) => setState((current) => ({ ...current, tutorDraft: value }))}
-          onSendTutor={sendTutorMessage}
-          onStartQuizGeneration={() => { void startProcessing(); }}
-          onQuestionCountChange={(questionCount) => updateState({ quizQuestionCount: questionCount })}
-          onDismissNotice={() => updateState({ notice: "" })}
-          notice={state.notice}
-          collapsed={state.rightPanelCollapsed}
-          onToggleCollapsed={() => updateState({ rightPanelCollapsed: !state.rightPanelCollapsed })}
-        />
-      </div>
+  return <div className={`study-app ${compact ? "is-compact" : ""}`} style={css}>
+    <a className="skip-link" href="#main-content">Bỏ qua điều hướng</a>
+    <Header source={source} lectureId={lectureId} theme={state.theme} drawer={drawer} onBack={() => state.screen === "lesson" ? patch({ notice: "Bạn đang ở học liệu hiện tại." }) : backToLesson()} onTheme={() => patch({ theme: state.theme === "light" ? "dark" : "light" })} onPanel={toggle} />
+    <div className="workspace">
+      <Materials source={source} files={slideCatalog} collapsed={lessonCollapsed} drawerOpen={drawer === "materials"} onToggle={() => toggle("materials")} onSelect={(fileName) => { patch({ selectedSourceFile: fileName, currentPage: 1, screen: "lesson", answers: {} }); setDrawer(null); }} />
+      <div className="resize-handle" role="separator" tabIndex={0} aria-label="Đổi độ rộng học liệu" onPointerDown={(event) => resize("materials", event)} onKeyDown={(event) => resizeKeys("materials", event)} />
+      <main id="main-content" className="study-main" tabIndex={-1}>{state.screen === "lesson" ? <Reader state={state} source={source} sourceUrl={sourceUrl} onPatch={patch} /> : <Flow state={state} source={source} onAnswer={(id, value) => patch({ answers: { ...state.answers, [id]: value } })} onMove={(amount) => patch({ currentQuestionIndex: Math.max(0, Math.min(state.generatedQuestions.length - 1, state.currentQuestionIndex + amount)) })} onBack={backToLesson} onGenerate={generate} onComplete={complete} onFlag={(id, reason) => patch({ flagged: { ...state.flagged, [id]: reason }, feedbackOpenFor: null })} />}</main>
+      <div className="resize-handle" role="separator" tabIndex={0} aria-label="Đổi độ rộng VLearn Tutor" onPointerDown={(event) => resize("tutor", event)} onKeyDown={(event) => resizeKeys("tutor", event)} />
+      <Tutor state={state} source={source} collapsed={tutorCollapsed} drawerOpen={drawer === "tutor"} onToggle={() => toggle("tutor")} onGenerate={generate} onPatch={patch} onReview={(attempt) => { patch({ screen: "review", generatedQuestions: attempt.questions, answers: attempt.answers, flagged: attempt.flagged, selectedSourceFile: attempt.sourceFileName }); setDrawer(null); focusMain(); }} />
     </div>
-  );
+    {drawer ? <button className="drawer-scrim" type="button" aria-label="Đóng bảng bên" onClick={() => setDrawer(null)} /> : null}
+    {state.screen === "review" && state.generatedQuestions.length ? <aside className="learning-assessment" aria-live="polite"><strong>Đánh giá tiếp thu</strong><p>{learningAssessment(scoreQuiz(state.generatedQuestions, state.answers), state.generatedQuestions.length)}</p>{reviewPriorities(state.generatedQuestions, state.answers).length ? <><h2>Nên ôn lại</h2><ul>{reviewPriorities(state.generatedQuestions, state.answers).map((item) => <li key={`${item.slide}-${item.excerpt}`}><b>Slide {item.slide}:</b> {item.excerpt}</li>)}</ul></> : <p className="assessment-complete">Bạn đã trả lời đúng toàn bộ câu hỏi trong lần này.</p>}</aside> : null}
+    {state.notice ? <div className="toast" role="status"><CheckCircle size={18} /><span>{state.notice}</span><button type="button" aria-label="Đóng thông báo" onClick={() => patch({ notice: "" })}><X size={16} /></button></div> : null}
+  </div>;
 }
+
+function Header({ source, lectureId, theme, drawer, onBack, onTheme, onPanel }: { source: SlideCatalogEntry; lectureId: string; theme: DemoState["theme"]; drawer: Panel | null; onBack: () => void; onTheme: () => void; onPanel: (panel: Panel) => void }) { return <header className="app-header"><div className="brand-row"><button className="icon-button" type="button" onClick={onBack} aria-label="Quay lại" title="Quay lại"><ArrowLeft size={20} /></button><div className="brand"><span>V</span><strong>VLearn</strong></div><div className="header-context"><strong>{source.fileName}</strong><span>{lectureId}</span></div></div><div className="header-actions"><button className={`icon-button compact-only ${drawer === "materials" ? "is-active" : ""}`} type="button" onClick={() => onPanel("materials")} aria-label="Mở học liệu"><BookOpenText size={20} /></button><button className={`icon-button compact-only ${drawer === "tutor" ? "is-active" : ""}`} type="button" onClick={() => onPanel("tutor")} aria-label="Mở VLearn Tutor"><Robot size={20} /></button><button className="icon-button" type="button" onClick={onTheme} aria-label="Đổi giao diện">{theme === "light" ? <Moon size={20} /> : <Sun size={20} />}</button><span className="avatar" aria-label="Sinh viên ẩn danh">AN</span></div></header>; }
+function Materials({ source, files, collapsed, drawerOpen, onToggle, onSelect }: { source: SlideCatalogEntry; files: SlideCatalogEntry[]; collapsed: boolean; drawerOpen: boolean; onToggle: () => void; onSelect: (name: string) => void }) { return <aside className={`materials-panel ${collapsed ? "is-collapsed" : ""} ${drawerOpen ? "is-drawer-open" : ""}`} aria-label="Học liệu"><div className="panel-title">{!collapsed && <><span className="panel-icon"><BookOpenText size={20} /></span><div><h2>Học liệu</h2><p>Slide của buổi học</p></div></>}<button className="panel-toggle" data-close={drawerOpen ? "materials" : undefined} type="button" onClick={onToggle} aria-label={drawerOpen ? "Đóng học liệu" : collapsed ? "Mở học liệu" : "Thu gọn học liệu"}>{drawerOpen ? <X size={18} /> : collapsed ? <CaretRight size={18} /> : <CaretLeft size={18} />}</button></div>{!collapsed && <div className="file-list">{files.map((file) => <button key={file.relativePath} type="button" className={`file-item ${file.fileName === source.fileName ? "is-current" : ""}`} onClick={() => onSelect(file.fileName)}><FilePdf size={20} /><span><strong>{file.fileName}</strong><small>{file.pageCount} trang · {bytes(file.sizeBytes)}</small></span>{file.fileName === source.fileName && <Check size={18} />}</button>)}</div>}</aside>; }
+function Tutor({ state, source, collapsed, drawerOpen, onToggle, onGenerate, onPatch, onReview }: { state: DemoState; source: SlideCatalogEntry; collapsed: boolean; drawerOpen: boolean; onToggle: () => void; onGenerate: () => void; onPatch: (value: Partial<DemoState>) => void; onReview: (attempt: QuizAttempt) => void }) {
+  const send = () => { const text = state.tutorDraft.trim(); if (!text) return onPatch({ notice: "Hãy nhập câu hỏi trước khi gửi." }); onPatch({ tutorDraft: "", tutorMessages: [...state.tutorMessages, { id: `student-${Date.now()}`, role: "student", text }, { id: `tutor-${Date.now()}`, role: "tutor", text: "Mình đang bám theo slide đang mở. Bạn có thể tạo quiz để tự kiểm tra phần vừa học." }] }); };
+  return <aside className={`tutor-panel ${collapsed ? "is-collapsed" : ""} ${drawerOpen ? "is-drawer-open" : ""}`} aria-label="VLearn Tutor"><div className="panel-title">{!collapsed && <><span className="panel-icon panel-icon-tutor"><Robot size={20} /></span><div><h2>VLearn Tutor</h2><p><i /> Sẵn sàng hỗ trợ</p></div></>}<button className="panel-toggle" data-close={drawerOpen ? "tutor" : undefined} type="button" onClick={onToggle} aria-label={drawerOpen ? "Đóng VLearn Tutor" : collapsed ? "Mở VLearn Tutor" : "Thu gọn VLearn Tutor"}>{drawerOpen ? <X size={18} /> : collapsed ? <CaretLeft size={18} /> : <CaretRight size={18} />}</button></div>{!collapsed && <><section className="source-summary"><span>Nguồn đang học</span><strong>{source.fileName}</strong><small>Trang {state.currentPage} · {source.pageCount} trang</small></section><section className="study-card"><div><Sparkle size={20} /><span><strong>Tự kiểm tra bài học</strong><small>Chỉ dùng nội dung trong slide đang mở</small></span></div><label>Số câu (1–20)<input type="number" min="1" max="20" value={state.quizQuestionCount} onChange={(event) => onPatch({ quizQuestionCount: Math.max(1, Math.min(20, Number(event.target.value) || 1)) })} /></label><label className="prompt-field"><span>Phần muốn ôn</span><textarea value={state.learnerIntent} maxLength={500} onChange={(event) => onPatch({ learnerIntent: event.target.value })} placeholder="Ví dụ: ôn attention, context window và grounding; ưu tiên câu hỏi ứng dụng." /></label><button className="primary-button" type="button" onClick={onGenerate} disabled={state.screen === "processing"}>Tạo câu hỏi</button></section>{state.quizAttempts.length ? <section className="attempts"><h3>Lần ôn gần đây</h3>{state.quizAttempts.map((item) => <button key={item.id} type="button" onClick={() => onReview(item)}><span><strong>{item.score}/{item.total} câu đúng</strong><small>{item.completedAtLabel} · {item.sourceFileName}</small></span><CaretRight size={18} /></button>)}</section> : null}<div className="chat"><div className="chat-log" aria-live="polite">{state.tutorMessages.map((message) => <p className={message.role === "student" ? "from-student" : ""} key={message.id}>{message.text}</p>)}</div><div className="chat-input"><input value={state.tutorDraft} onChange={(event) => onPatch({ tutorDraft: event.target.value })} onKeyDown={(event) => event.key === "Enter" && send()} placeholder="Hỏi về slide này..." aria-label="Câu hỏi cho VLearn Tutor"/><button type="button" onClick={send} aria-label="Gửi câu hỏi"><PaperPlaneRight size={18} /></button></div></div></>}</aside>;
+}
+function Reader({ state, source, sourceUrl, onPatch }: { state: DemoState; source: SlideCatalogEntry; sourceUrl: string; onPatch: (value: Partial<DemoState>) => void }) { const url = `${sourceUrl}#page=${state.currentPage}&zoom=${state.zoom}`; return <section className="reader"><div className="reader-toolbar"><div><span>Đang học</span><strong>{source.fileName}</strong></div><div className="toolbar-actions"><button className="icon-button" type="button" onClick={() => onPatch({ zoom: Math.max(70, state.zoom - 10) })} aria-label="Thu nhỏ"><Minus size={18} /></button><strong>{state.zoom}%</strong><button className="icon-button" type="button" onClick={() => onPatch({ zoom: Math.min(150, state.zoom + 10) })} aria-label="Phóng to"><Plus size={18} /></button><button className="icon-button" type="button" onClick={() => onPatch({ zoom: 90 })} aria-label="Vừa trang"><CornersOut size={18} /></button><a className="icon-button" href={sourceUrl} download={source.fileName} aria-label="Tải học liệu"><DownloadSimple size={18} /></a></div></div><div className="pdf-frame"><iframe key={url} src={url} title={`Slide ${state.currentPage} của ${source.fileName}`} /></div><div className="reader-footer"><button type="button" onClick={() => onPatch({ currentPage: Math.max(1, state.currentPage - 1) })} disabled={state.currentPage <= 1}><CaretLeft size={18} />Trang trước</button><span>Trang <strong>{state.currentPage}</strong> / {source.pageCount}</span><button type="button" onClick={() => onPatch({ currentPage: Math.min(source.pageCount, state.currentPage + 1) })} disabled={state.currentPage >= source.pageCount}>Trang sau<CaretRight size={18} /></button></div></section>; }
+function Flow({ state, source, onAnswer, onMove, onBack, onGenerate, onComplete, onFlag }: { state: DemoState; source: SlideCatalogEntry; onAnswer: (id: string, value: string) => void; onMove: (amount: number) => void; onBack: (page?: number) => void; onGenerate: () => void; onComplete: () => void; onFlag: (id: string, reason: string) => void }) { if (state.screen === "processing") return <section className="flow processing"><span className="flow-kicker">Đang chuẩn bị</span><h1>Tạo câu hỏi từ học liệu</h1><p>VLearn đang chỉ dùng nội dung trong {source.fileName}.</p><div className="steps">{["Đang đọc slide", "Đang chọn nội dung chính", "Đang kiểm tra căn cứ"].map((item, index) => <div className={index <= state.processingStage ? "active" : ""} key={item}><span>{index < state.processingStage ? <Check size={16} /> : index + 1}</span>{item}</div>)}</div><button className="secondary-button" type="button" onClick={() => onBack()}>Hủy</button></section>;
+  if (state.screen === "quiz") { const question = state.generatedQuestions[state.currentQuestionIndex]; if (!question) return null; const selected = state.answers[question.id]; const last = state.currentQuestionIndex === state.generatedQuestions.length - 1; return <Quiz question={question} index={state.currentQuestionIndex} total={state.generatedQuestions.length} selected={selected} onAnswer={onAnswer} onPrevious={() => onMove(-1)} onNext={() => last ? onComplete() : onMove(1)} />; }
+  if (state.screen === "review") return <Review state={state} source={source} onBack={onBack} onFlag={onFlag} />;
+  const insufficient = state.screen === "insufficient"; return <section className="flow empty"><span className="flow-kicker">{insufficient ? "Chưa đủ căn cứ" : "Chưa hoàn tất"}</span><h1>{insufficient ? "Chưa đủ nội dung để tạo câu hỏi" : "Không thể tạo câu hỏi lúc này"}</h1><p>{state.errorMessage}</p><div><button className="secondary-button" type="button" onClick={() => onBack()}>Quay lại học liệu</button>{!insufficient && <button className="primary-button" type="button" onClick={onGenerate}>Thử lại</button>}</div></section>; }
+function Quiz({ question, index, total, selected, onAnswer, onPrevious, onNext }: { question: QuizQuestion; index: number; total: number; selected?: string; onAnswer: (id: string, value: string) => void; onPrevious: () => void; onNext: () => void }) { return <section className="flow quiz-flow"><div className="quiz-progress"><span>Tự kiểm tra</span><strong>Câu {index + 1} / {total}</strong></div><span className="flow-kicker">Nhớ lại ý chính</span><h1>{question.prompt}</h1><fieldset><legend className="sr-only">Chọn một đáp án</legend>{question.choices.map((choice, index) => <label className={selected === choice.id ? "selected" : ""} key={choice.id}><input type="radio" name="answer" checked={selected === choice.id} onChange={() => onAnswer(question.id, choice.id)} /><span>{String.fromCharCode(65 + index)}</span>{choice.label}</label>)}</fieldset><div className="flow-actions">{index ? <button className="text-button" type="button" onClick={onPrevious}>Câu trước</button> : <span /> }<button className="primary-button" type="button" disabled={!selected} onClick={onNext}>{index === total - 1 ? "Nộp bài" : "Tiếp tục"}</button></div></section>; }
+function Review({ state, source, onBack, onFlag }: { state: DemoState; source: SlideCatalogEntry; onBack: (page?: number) => void; onFlag: (id: string, reason: string) => void }) { const score = scoreQuiz(state.generatedQuestions, state.answers); return <section className="flow review"><header><div><span className="flow-kicker">Kết quả tự kiểm tra</span><h1>Bạn nhớ đúng {score}/{state.generatedQuestions.length} câu</h1><p>Đây là kiểm tra nhanh, không phải đánh giá mức độ thành thạo.</p></div><strong>{score}/{state.generatedQuestions.length}</strong></header>{state.generatedQuestions.map((question, index) => { const correct = question.choices.find((item) => item.id === question.correctChoiceId); const selected = question.choices.find((item) => item.id === state.answers[question.id]); const okay = selected?.id === correct?.id; return <article className={okay ? "correct" : "incorrect"} key={question.id}><span>{okay ? <CheckCircle size={20} /> : <X size={20} />} Câu {index + 1}</span><h2>{question.prompt}</h2><p><b>Bạn chọn:</b> {selected?.label ?? "Bỏ qua"}</p><p><b>Đáp án:</b> {correct?.label}</p><div>{question.explanation}</div><button className="text-button" type="button" onClick={() => onBack(question.source.pageOrSlide)}>Xem nguồn: slide {question.source.pageOrSlide}</button>{!state.flagged[question.id] && <button className="text-button" type="button" onClick={() => onFlag(question.id, "Câu hỏi chưa rõ")}>Báo câu hỏi chưa rõ</button>}</article>; })}<button className="primary-button" type="button" onClick={() => onBack()}>Quay lại học liệu</button></section>; }
