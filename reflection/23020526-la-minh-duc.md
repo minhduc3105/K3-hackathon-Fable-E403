@@ -1,0 +1,21 @@
+# Reflection - Lã Minh Đức / 23020526
+
+## Vai trò và phần tôi làm
+
+Tôi phụ trách product UI, prototype CP2, fine-tune giao diện và React migration. Các commit chính là `35983a8`, `f80d256` và `d92c76e`; artifact nằm tại `codebase/src/features/quiz-from-slides/components/` và `codebase/src/styles/app.css`.
+
+## AI hỗ trợ như thế nào
+
+AI hỗ trợ rà soát layout, copy trạng thái và accessibility. Tôi kiểm tra lại hành vi thực tế của các control: `Quay lại`, thu/mở hai panel, ẩn icon `▣` khi thu gọn, đổi `VI ↔ EN`, focus sau chuyển màn và điều hướng quiz.
+
+## Một quyết định tôi có thể giải thích
+
+Tôi có thể giải thích vì sao nguồn được giữ ngay trong reader và xuất hiện lại ở review: học viên cần kiểm chứng đáp án mà không rời ngữ cảnh bài học; điểm quiz không được trình bày như đánh giá mastery.
+
+## Bài học từ case fail của nhóm
+
+Một giao diện đẹp không bù được response không hợp lệ. Baseline 50% cho thấy contract giữa AI và UI phải được kiểm tra trước khi render, còn màn low-confidence/failure cần nói rõ bước tiếp theo thay vì chỉ báo lỗi chung.
+
+## Nếu có thêm thời gian
+
+Tôi sẽ thay ký tự icon bằng một icon family thống nhất, thêm automated accessibility test và chụp đối chiếu desktop/mobile cho cả bốn đường đi.
