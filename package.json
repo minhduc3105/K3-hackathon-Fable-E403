@@ -1,0 +1,20 @@
+{
+  "name": "k3-hackathon-fable-e403",
+  "version": "1.0.0",
+  "description": "**SPEC → Prototype → Demo.** Đây không phải cuộc thi code — đây là cuộc thi **tư duy sản phẩm AI**.",
+  "main": "generate-slides.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/minhduc3105/K3-hackathon-Fable-E403.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/minhduc3105/K3-hackathon-Fable-E403/issues"
+  },
+  "homepage": "https://github.com/minhduc3105/K3-hackathon-Fable-E403#readme"
+}
