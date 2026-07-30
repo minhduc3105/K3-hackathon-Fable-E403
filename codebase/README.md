@@ -1,41 +1,32 @@
-# VLearn AI Tutor Prototype
+# VLearn Quiz Prototype — CP2
 
-Prototype cho lát cắt:
+**Product slice:** Learner uploads lesson slides → AI generates 4-choice MCQs → learner completes quiz → reviews with source citations.
 
-```text
-Mở học liệu trong VLearn -> AI đọc tài liệu đang học -> sinh MCQ 4 đáp án -> học viên làm ngay trong reader
+## Setup
+
+```bash
+npm install
+npm run dev
 ```
 
-Không có bước upload thủ công. Tài liệu đang được chọn trong sidebar là nguồn duy nhất để tạo quiz.
+Open [http://localhost:3000](http://localhost:3000)
 
-## Chạy local
+## Structure
 
-Từ thư mục repo:
+- `src/app/` — Next.js App Router pages and API routes
+- `src/features/quiz-from-slides/` — Quiz feature (components, state, server logic)
+- `src/components/ui/` — Shared UI primitives
+- `src/lib/` — Shared utilities
 
-```powershell
-python -m http.server 4173 --directory codebase
-```
+## CP2 Status
 
-Mở `http://localhost:4173`.
+**Mock level:** Sketch/Mock prototype with deterministic fixtures.
+- ✅ Upload → Processing → Quiz → Review flow clicks through
+- ✅ Happy, low-confidence, failure, correction paths reachable
+- ⏳ AI call (CP3 requirement) — provider adapter slot prepared, will connect OpenAI/OpenRouter
 
-## Kịch bản demo chính
+**Mocked parts:**
+- Slide extraction (returns fixture text)
+- Quiz generation (returns fixture questions)
 
-1. Mở tài liệu đang học trong `Day 5`.
-2. Dùng reader để đổi trang, zoom, chuyển chế độ đọc/ghi chú hoặc hỏi VLearn Tutor.
-3. Trong panel `VLearn Tutor`, bấm `Tạo câu hỏi ôn tập`.
-4. Theo dõi AI đọc chính học liệu đang mở, tạo 4 câu MCQ, làm bài và xem kết quả.
-5. Trong review, bấm nguồn của từng câu để quay về đúng slide trong reader.
-
-## Các nhánh trạng thái
-
-- `Day 5 / day05-ai-product-thinking-requirements.pdf`: luồng tạo quiz thành công.
-- `Day 1 / whiteboard-scan.pdf`: học liệu toàn ảnh, hiển thị trạng thái chưa đủ căn cứ.
-- `Day 2 / day02-legacy-material.pdf`: mô phỏng lỗi trích xuất và cho phép thử lại.
-
-## Tương tác đã bật
-
-Các nhóm nút topbar, accordion ngày học, chọn học liệu, toolbar reader, chuyển trang, download demo, Tutor, tạo quiz, điều hướng câu hỏi, làm lại, feedback và quay về nguồn đều đã nối với state của prototype.
-
-## Phạm vi prototype
-
-Nội dung AI và trích xuất hiện dùng fixture có kiểm soát để demo ổn định, chưa gọi model hoặc API VLearn thật. Điểm nối adapter thật nằm trong feature `src/features/quiz-from-slides/`.
+Real AI integration comes at CP3.
