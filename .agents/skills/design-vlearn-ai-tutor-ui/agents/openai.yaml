@@ -1,0 +1,4 @@
+interface:
+  display_name: "VLearn AI Tutor UI"
+  short_description: "Design and structure the VLearn quiz experience"
+  default_prompt: "Use $design-vlearn-ai-tutor-ui to design and implement the VLearn slide-to-quiz flow."
