@@ -1,69 +1,77 @@
 import type { QuizQuestion, GenerateQuizResult } from "../model/quiz.types";
 
-// Happy path: valid quiz with grounded questions
+// Happy path: valid quiz with grounded questions (Day04 – Prompt Engineering & Tool Calling)
 export const happyPathQuestions: QuizQuestion[] = [
   {
     id: "q1",
-    prompt: "Điều gì là đặc điểm chính của Generative AI so với AI truyền thống?",
+    prompt: "Kỹ thuật few-shot prompting khác zero-shot ở điểm nào?",
     choices: [
-      { id: "q1c1", text: "Chỉ phân loại dữ liệu" },
-      { id: "q1c2", text: "Tạo ra nội dung mới từ dữ liệu đã học" },
-      { id: "q1c3", text: "Chỉ xử lý văn bản" },
-      { id: "q1c4", text: "Không cần dữ liệu huấn luyện" },
+      { id: "q1c1", text: "Few-shot cung cấp một vài ví dụ mẫu ngay trong prompt" },
+      { id: "q1c2", text: "Few-shot yêu cầu fine-tune lại mô hình" },
+      { id: "q1c3", text: "Few-shot chỉ dùng cho bài toán phân loại ảnh" },
+      { id: "q1c4", text: "Few-shot không cần mô tả nhiệm vụ" },
     ],
-    correctChoiceId: "q1c2",
-    explanation: "Generative AI có khả năng tạo ra nội dung mới (văn bản, hình ảnh, âm thanh) dựa trên mẫu đã học từ dữ liệu huấn luyện.",
+    correctChoiceId: "q1c1",
+    explanation:
+      "Few-shot prompting đưa một vài ví dụ (input → output) vào ngay trong prompt để mô hình học mẫu tại thời điểm suy luận, không cần huấn luyện lại.",
     source: {
-      pageOrSlide: 3,
-      excerpt: "Generative AI models learn patterns from training data and can generate new content...",
+      pageOrSlide: 4,
+      excerpt:
+        "Few-shot prompting includes a handful of examples in the prompt so the model can infer the desired pattern in-context...",
     },
   },
   {
     id: "q2",
-    prompt: "Transformer architecture được giới thiệu trong paper nào?",
+    prompt: "Chain-of-Thought (CoT) prompting giúp cải thiện điều gì?",
     choices: [
-      { id: "q2c1", text: "Attention Is All You Need (2017)" },
-      { id: "q2c2", text: "BERT (2018)" },
-      { id: "q2c3", text: "GPT-1 (2018)" },
-      { id: "q2c4", text: "ResNet (2015)" },
+      { id: "q2c1", text: "Giảm số token của prompt" },
+      { id: "q2c2", text: "Khả năng suy luận nhiều bước của mô hình" },
+      { id: "q2c3", text: "Tốc độ suy luận của GPU" },
+      { id: "q2c4", text: "Kích thước cửa sổ ngữ cảnh" },
     ],
-    correctChoiceId: "q2c1",
-    explanation: "Paper 'Attention Is All You Need' của Vaswani et al. (2017) đã giới thiệu kiến trúc Transformer, nền tảng cho các mô hình ngôn ngữ hiện đại.",
+    correctChoiceId: "q2c2",
+    explanation:
+      "CoT khuyến khích mô hình trình bày các bước suy luận trung gian, nhờ đó cải thiện độ chính xác trên các bài toán cần lập luận nhiều bước.",
     source: {
-      pageOrSlide: 5,
-      excerpt: "The Transformer architecture was introduced in the seminal 2017 paper 'Attention Is All You Need'...",
+      pageOrSlide: 7,
+      excerpt:
+        "Chain-of-thought prompting encourages the model to produce intermediate reasoning steps, improving multi-step reasoning...",
     },
   },
   {
     id: "q3",
-    prompt: "Kỹ thuật nào giúp LLM tập trung vào các phần quan trọng của input?",
+    prompt: "Trong tool calling (function calling), mô hình trả về gì để gọi công cụ?",
     choices: [
-      { id: "q3c1", text: "Pooling" },
-      { id: "q3c2", text: "Convolution" },
-      { id: "q3c3", text: "Self-Attention" },
-      { id: "q3c4", text: "Dropout" },
+      { id: "q3c1", text: "Mã máy đã biên dịch" },
+      { id: "q3c2", text: "Một JSON chứa tên hàm và tham số" },
+      { id: "q3c3", text: "Ảnh chụp màn hình kết quả" },
+      { id: "q3c4", text: "Trọng số của mô hình" },
     ],
-    correctChoiceId: "q3c3",
-    explanation: "Self-Attention mechanism cho phép mô hình tính toán mức độ liên quan giữa các token và tập trung vào các phần quan trọng của input.",
+    correctChoiceId: "q3c2",
+    explanation:
+      "Mô hình sinh ra một cấu trúc JSON gồm tên hàm và các tham số; ứng dụng thực thi hàm đó rồi trả kết quả lại cho mô hình để tiếp tục.",
     source: {
-      pageOrSlide: 7,
-      excerpt: "Self-attention allows the model to weigh the importance of different parts of the input sequence...",
+      pageOrSlide: 12,
+      excerpt:
+        "With function calling, the model emits a structured JSON object naming the function and its arguments for the app to execute...",
     },
   },
   {
     id: "q4",
-    prompt: "Temperature parameter trong sampling ảnh hưởng đến output như thế nào?",
+    prompt: "Đâu là rủi ro cần lưu ý khi thiết kế prompt cho hệ thống thật?",
     choices: [
-      { id: "q4c1", text: "Temperature cao làm output ngẫu nhiên hơn" },
-      { id: "q4c2", text: "Temperature thấp làm output ngẫu nhiên hơn" },
-      { id: "q4c3", text: "Temperature không ảnh hưởng đến output" },
-      { id: "q4c4", text: "Temperature chỉ ảnh hưởng tốc độ" },
+      { id: "q4c1", text: "Prompt injection từ dữ liệu người dùng" },
+      { id: "q4c2", text: "Prompt luôn cho kết quả xác định" },
+      { id: "q4c3", text: "Không thể thêm ví dụ vào prompt" },
+      { id: "q4c4", text: "Mô hình bỏ qua system prompt hoàn toàn" },
     ],
     correctChoiceId: "q4c1",
-    explanation: "Temperature cao (>1) làm phân phối xác suất phẳng hơn, dẫn đến output đa dạng và sáng tạo hơn. Temperature thấp (<1) làm output tập trung và xác định hơn.",
+    explanation:
+      "Prompt injection xảy ra khi nội dung do người dùng/nguồn ngoài cung cấp chứa chỉ thị lấn át prompt gốc; cần tách biệt và kiểm soát dữ liệu không tin cậy.",
     source: {
-      pageOrSlide: 12,
-      excerpt: "Higher temperature values (>1) make the output more random and creative, while lower values (<1) make it more focused...",
+      pageOrSlide: 15,
+      excerpt:
+        "Untrusted input may contain instructions that override the intended prompt — treat external content as data, not commands...",
     },
   },
 ];

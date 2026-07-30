@@ -1,4 +1,4 @@
-import type { QuizState, QuizAction } from "./quiz.types";
+import type { QuizState, QuizAction, QuizQuestion } from "./quiz.types";
 
 export function quizReducer(state: QuizState, action: QuizAction): QuizState {
   switch (action.type) {
@@ -124,11 +124,11 @@ export function quizReducer(state: QuizState, action: QuizAction): QuizState {
 }
 
 export function calculateScore(
-  questions: QuizState extends { questions: infer Q } ? Q : never,
+  questions: QuizQuestion[],
   answers: Record<string, string>
 ): number {
   let correct = 0;
-  for (const q of questions as any[]) {
+  for (const q of questions) {
     if (answers[q.id] === q.correctChoiceId) {
       correct++;
     }

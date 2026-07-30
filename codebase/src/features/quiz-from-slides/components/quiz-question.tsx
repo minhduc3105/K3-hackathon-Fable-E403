@@ -10,9 +10,10 @@ type Props = {
 };
 
 export function QuizQuestion({ state, dispatch }: Props) {
-  const currentQuestion = state.questions[state.currentIndex];
+  const currentIndex = state.status === "ready" ? state.currentIndex : 0;
+  const currentQuestion = state.questions[currentIndex];
   const selectedAnswer = state.answers[currentQuestion.id];
-  const isLastQuestion = state.currentIndex === state.questions.length - 1;
+  const isLastQuestion = currentIndex === state.questions.length - 1;
   const allAnswered = state.questions.every((q) => state.answers[q.id]);
 
   const handleSubmit = () => {
@@ -31,7 +32,7 @@ export function QuizQuestion({ state, dispatch }: Props) {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-600 mb-1">
-              Câu {state.currentIndex + 1} / {state.questions.length}
+              Câu {currentIndex + 1} / {state.questions.length}
             </p>
             <div className="flex gap-1">
               {state.questions.map((q, idx) => (
@@ -40,7 +41,7 @@ export function QuizQuestion({ state, dispatch }: Props) {
                   className={`w-8 h-1 rounded-full ${
                     state.answers[q.id]
                       ? "bg-accent"
-                      : idx === state.currentIndex
+                      : idx === currentIndex
                       ? "bg-accent/30"
                       : "bg-gray-200"
                   }`}
@@ -103,7 +104,7 @@ export function QuizQuestion({ state, dispatch }: Props) {
       <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between">
         <button
           onClick={() => dispatch({ type: "PREV_QUESTION" })}
-          disabled={state.currentIndex === 0}
+          disabled={currentIndex === 0}
           className="px-4 py-2 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <ChevronLeft className="w-4 h-4" />

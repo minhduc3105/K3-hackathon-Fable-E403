@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "VLearn Quiz - Kiểm tra bài học",
-  description: "Tạo câu hỏi kiểm tra nhanh từ slide bài học",
+  title: "VLearn · Học liệu & Trợ lý học tập",
+  description:
+    "Không gian học tập VLearn: đọc slide, và tạo câu hỏi trắc nghiệm ôn tập cùng VLearn Tutor.",
 };
 
 export default function RootLayout({
@@ -13,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
-      <body className="bg-gray-50 text-gray-900">{children}</body>
+      <body className="bg-surface-sunken text-brand-800 antialiased">{children}</body>
     </html>
   );
 }
