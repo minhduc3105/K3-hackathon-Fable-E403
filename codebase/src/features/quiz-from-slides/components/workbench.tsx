@@ -2,9 +2,8 @@
 
 import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { quizQuestions } from "../data/lesson-fixture";
 import { getMaterial, initialState } from "../model/quiz-machine";
-import type { DemoState, SlideCatalogEntry } from "../model/types";
+import type { DemoState, GenerateQuizResult, QuizScenario, SlideCatalogEntry } from "../model/types";
 import { LessonSidebar, TutorSidebar } from "./sidebars";
 import { LessonScreen, ProcessingScreen, QuizScreen, ReviewScreen, SimpleEmptyScreen } from "./flow-screens";
 import { Topbar } from "./topbar";
@@ -14,6 +13,7 @@ type WorkbenchProps = {
   lectureId: string;
   materialId: string;
   slideCatalog: SlideCatalogEntry[];
+  demoScenario?: QuizScenario;
 };
 
 const LEFT_PANEL_MIN = 216;
@@ -24,7 +24,7 @@ function clamp(value: number, min: number, max = PANEL_MAX) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog }: WorkbenchProps) {
+export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog, demoScenario = "normal" }: WorkbenchProps) {
   const initialMaterial = useMemo(() => getMaterial(materialId), [materialId]);
   const [state, setState] = useState<DemoState>(() => ({
     ...initialState,
@@ -32,7 +32,7 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog 
     currentPage: 1,
     selectedSourceFile: slideCatalog[0]?.fileName ?? null,
   }));
-  const processingTimer = useRef<number | null>(null);
+  const generationController = useRef<AbortController | null>(null);
   const tutorTimer = useRef<number | null>(null);
   const activeSource = slideCatalog.find((file) => file.fileName === state.selectedSourceFile) ?? slideCatalog[0] ?? {
     fileName: "Học liệu PDF",
@@ -57,29 +57,9 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog 
   }, [state.screen]);
 
   useEffect(() => () => {
-    if (processingTimer.current) window.clearTimeout(processingTimer.current);
+    generationController.current?.abort();
     if (tutorTimer.current) window.clearTimeout(tutorTimer.current);
   }, []);
-
-  useEffect(() => {
-    if (state.screen !== "processing") return;
-    if (processingTimer.current) window.clearTimeout(processingTimer.current);
-
-    const advance = () => {
-      setState((current) => {
-        if (current.screen !== "processing") return current;
-        if (current.processingStage < 2) {
-          processingTimer.current = window.setTimeout(advance, 650);
-          return { ...current, processingStage: (current.processingStage + 1) as 0 | 1 | 2 };
-        }
-        processingTimer.current = window.setTimeout(() => setState((latest) => ({ ...latest, screen: "quiz", currentQuestionIndex: 0, answers: {} })), 550);
-        return current;
-      });
-    };
-
-    processingTimer.current = window.setTimeout(advance, 650);
-    return () => { if (processingTimer.current) window.clearTimeout(processingTimer.current); };
-  }, [state.screen]);
 
   const updateState = (patch: Partial<DemoState>, moveFocus = false) => {
     setState((current) => ({ ...current, ...patch }));
@@ -87,13 +67,92 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog 
   };
 
   const backToLesson = (page = state.currentPage) => {
-    if (processingTimer.current) window.clearTimeout(processingTimer.current);
+    generationController.current?.abort();
+    generationController.current = null;
     updateState({ screen: "lesson", currentPage: Math.min(sourcePageCount, Math.max(1, page)), processingStage: 0, errorMessage: "" }, true);
   };
 
-  const startProcessing = () => {
-    if (processingTimer.current) window.clearTimeout(processingTimer.current);
-    updateState({ screen: "processing", processingStage: 0, scenario: "normal", answers: {}, currentQuestionIndex: 0 });
+  const startProcessing = async () => {
+    if (generationController.current) return;
+
+    const controller = new AbortController();
+    generationController.current = controller;
+    updateState({
+      screen: "processing",
+      processingStage: 0,
+      scenario: "normal",
+      answers: {},
+      generatedQuestions: [],
+      currentQuestionIndex: 0,
+      errorMessage: "",
+    });
+
+    if (demoScenario === "insufficient") {
+      updateState({
+        screen: "insufficient",
+        scenario: "insufficient",
+        errorMessage: "Kịch bản demo: học liệu có quá ít chữ rõ ràng để tạo đủ bốn câu hỏi có căn cứ.",
+      }, true);
+      generationController.current = null;
+      return;
+    }
+
+    if (demoScenario === "failure") {
+      updateState({
+        screen: "error",
+        scenario: "failure",
+        errorMessage: "Kịch bản demo: bước trích xuất học liệu thất bại. Nguồn đã chọn vẫn được giữ để thử lại.",
+      }, true);
+      generationController.current = null;
+      return;
+    }
+
+    try {
+      setState((current) => ({ ...current, processingStage: 1 }));
+      const response = await fetch("/api/quiz/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sourceFileName,
+          sourcePage: state.currentPage,
+        }),
+        signal: controller.signal,
+      });
+      const result = await response.json() as GenerateQuizResult;
+      setState((current) => ({ ...current, processingStage: 2 }));
+
+      if (result.status === "ready") {
+        updateState({
+          screen: "quiz",
+          generatedQuestions: result.questions,
+          currentQuestionIndex: 0,
+          answers: {},
+          notice: `AI đã tạo ${result.questions.length} câu có căn cứ. Trace: ${result.traceId.slice(0, 8)}`,
+        }, true);
+        return;
+      }
+
+      if (result.status === "insufficient_content" || result.status === "out_of_scope") {
+        updateState({
+          screen: "insufficient",
+          errorMessage: result.reason,
+        }, true);
+        return;
+      }
+
+      updateState({
+        screen: "error",
+        errorMessage: result.reason,
+      }, true);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      updateState({
+        screen: "error",
+        errorMessage: error instanceof Error ? error.message : "Không thể gọi AI để tạo câu hỏi.",
+      }, true);
+    } finally {
+      generationController.current = null;
+    }
   };
 
   const selectSourceFile = (fileName: string) => {
@@ -156,10 +215,13 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog 
         materialName={sourceFileName}
         lectureId={lectureId}
         onBack={() => state.screen === "lesson" ? updateState({ notice: "Bạn đang ở màn hình reader của học liệu." }) : backToLesson()}
-        onToggleLanguage={() => updateState({ languageMenuOpen: !state.languageMenuOpen, profileOpen: false })}
-        onSelectLanguage={() => updateState({ languageMenuOpen: false, notice: "Ngôn ngữ đang dùng: Tiếng Việt" })}
+        onToggleLanguage={() => updateState({
+          language: state.language === "vi" ? "en" : "vi",
+          profileOpen: false,
+          notice: state.language === "vi" ? "Language switched to English." : "Đã chuyển sang tiếng Việt.",
+        })}
         onToggleTheme={() => updateState({ theme: state.theme === "light" ? "dark" : "light" })}
-        onToggleProfile={() => updateState({ profileOpen: !state.profileOpen, languageMenuOpen: false })}
+        onToggleProfile={() => updateState({ profileOpen: !state.profileOpen })}
         onCloseProfile={() => updateState({ profileOpen: false })}
       />
       <div className="reader-layout">
@@ -175,9 +237,26 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog 
           {state.screen !== "lesson" ? <div className="breadcrumb"><span>Khóa học</span><span aria-hidden="true">/</span><span>{courseId.toUpperCase()}</span><span aria-hidden="true">/</span><span className="breadcrumb-current">{state.screen === "processing" ? "Đang tạo câu hỏi" : state.screen === "quiz" ? "Làm bài kiểm tra" : state.screen === "review" ? "Kết quả" : state.screen === "insufficient" ? "Chưa đủ nội dung" : "Lỗi xử lý"}</span></div> : null}
           {state.screen === "lesson" ? <LessonScreen state={state} sourceFile={activeSource} sourceUrl={sourceUrl} onZoomOut={() => updateState({ zoom: Math.max(70, state.zoom - 10) })} onZoomIn={() => updateState({ zoom: Math.min(150, state.zoom + 10) })} onFitPage={() => updateState({ zoom: 90 })} onDownloadMaterial={downloadMaterial} onOpenMaterialWindow={() => window.open(sourceUrl, "_blank", "noopener,noreferrer")} onPreviousPage={() => updateState({ currentPage: Math.max(1, state.currentPage - 1) })} onNextPage={() => updateState({ currentPage: Math.min(sourcePageCount, state.currentPage + 1) })} /> : null}
           {state.screen === "processing" ? <ProcessingScreen state={state} sourceFileName={sourceFileName} onCancelProcessing={() => backToLesson()} /> : null}
-          {state.screen === "quiz" ? <QuizScreen state={state} sourceFileName={sourceFileName} onSelectAnswer={(value) => { const question = quizQuestions[state.currentQuestionIndex]; updateState({ answers: { ...state.answers, [question.id]: value } }); }} onPreviousQuestion={() => updateState({ currentQuestionIndex: Math.max(0, state.currentQuestionIndex - 1) })} onSkipQuestion={() => state.currentQuestionIndex < quizQuestions.length - 1 ? updateState({ currentQuestionIndex: state.currentQuestionIndex + 1 }) : updateState({ screen: "review" })} onNextQuestion={() => state.currentQuestionIndex < quizQuestions.length - 1 ? updateState({ currentQuestionIndex: state.currentQuestionIndex + 1 }) : updateState({ screen: "review" })} /> : null}
+          {state.screen === "quiz" ? (
+            <QuizScreen
+              state={state}
+              sourceFileName={sourceFileName}
+              onSelectAnswer={(value) => {
+                const question = state.generatedQuestions[state.currentQuestionIndex];
+                if (!question) return;
+                updateState({ answers: { ...state.answers, [question.id]: value } });
+              }}
+              onPreviousQuestion={() => updateState({ currentQuestionIndex: Math.max(0, state.currentQuestionIndex - 1) })}
+              onSkipQuestion={() => state.currentQuestionIndex < state.generatedQuestions.length - 1
+                ? updateState({ currentQuestionIndex: state.currentQuestionIndex + 1 })
+                : updateState({ screen: "review" })}
+              onNextQuestion={() => state.currentQuestionIndex < state.generatedQuestions.length - 1
+                ? updateState({ currentQuestionIndex: state.currentQuestionIndex + 1 })
+                : updateState({ screen: "review" })}
+            />
+          ) : null}
           {state.screen === "review" ? <ReviewScreen state={state} sourceFileName={sourceFileName} onRetryQuiz={() => updateState({ screen: "quiz", currentQuestionIndex: 0, answers: {}, flagged: {} })} onBackToLesson={() => backToLesson()} onOpenFeedback={(questionId) => updateState({ feedbackOpenFor: questionId })} onFlagFeedback={(questionId, reason) => updateState({ flagged: { ...state.flagged, [questionId]: reason }, feedbackOpenFor: null })} onJumpToSource={(page) => backToLesson(page)} /> : null}
-          {state.screen === "insufficient" ? <SimpleEmptyScreen notice="Không đủ căn cứ" title="Chưa đủ nội dung để tạo câu hỏi" body={`${sourceFileName} chủ yếu là hình ảnh hoặc có quá ít chữ rõ ràng.`} actionLabel="Quay lại học liệu" onAction={() => backToLesson()} /> : null}
+          {state.screen === "insufficient" ? <SimpleEmptyScreen notice="Không đủ căn cứ" title="Chưa đủ nội dung để tạo câu hỏi" body={state.errorMessage || `${sourceFileName} chủ yếu là hình ảnh hoặc có quá ít chữ rõ ràng.`} actionLabel="Quay lại học liệu" onAction={() => backToLesson()} /> : null}
           {state.screen === "error" ? <SimpleEmptyScreen notice="Chưa hoàn tất" title="Không thể tạo bộ câu hỏi lúc này" body={state.errorMessage || `Không thể xử lý ${sourceFileName} trong lần này.`} actionLabel="Thử lại" onAction={startProcessing} /> : null}
         </main>
         <div className="panel-resizer" role="separator" aria-orientation="vertical" aria-label="Đổi độ rộng VLearn Tutor" aria-valuenow={state.rightPanelWidth} tabIndex={0} onPointerDown={(event) => resizePanel("right", event)} onKeyDown={(event) => resizeWithKeyboard("right", event)} />
@@ -192,7 +271,7 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog 
           onRestoreChat={(label) => updateState({ tutorMessages: [...initialState.tutorMessages, { id: `restored-${Date.now()}`, role: "student", text: label }], tutorHistoryOpen: false })}
           onTutorDraftChange={(value) => setState((current) => ({ ...current, tutorDraft: value }))}
           onSendTutor={sendTutorMessage}
-          onStartQuizGeneration={startProcessing}
+          onStartQuizGeneration={() => { void startProcessing(); }}
           onDismissNotice={() => updateState({ notice: "" })}
           notice={state.notice}
           collapsed={state.rightPanelCollapsed}

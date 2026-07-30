@@ -7,7 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "eval:check": "node ../eval/check-golden-set.mjs",
+    "eval:cp3": "node ../eval/run-cp3-eval.mjs"
   },
   "dependencies": {
     "next": "^15.4.0",

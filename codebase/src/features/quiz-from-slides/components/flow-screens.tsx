@@ -1,4 +1,3 @@
-import { quizQuestions } from "../data/lesson-fixture";
 import type { DemoState, LessonMaterial, SlideCatalogEntry } from "../model/types";
 import { scoreQuiz } from "../model/quiz-machine";
 
@@ -60,7 +59,7 @@ type ProcessingScreenProps = {
 };
 
 export function ProcessingScreen({ state, sourceFileName, onCancelProcessing }: ProcessingScreenProps) {
-  const stages = ["Đang đọc học liệu", "Đang chọn nội dung chính", "Đang tạo câu hỏi"];
+  const stages = ["Đang chuẩn bị nguồn", "Đang gọi AI", "Đang kiểm tra căn cứ"];
 
   return (
     <div className="flow-wrap">
@@ -99,7 +98,11 @@ type QuizScreenProps = {
 };
 
 export function QuizScreen({ state, sourceFileName, onSelectAnswer, onPreviousQuestion, onSkipQuestion, onNextQuestion }: QuizScreenProps) {
+  const quizQuestions = state.generatedQuestions;
   const question = quizQuestions[state.currentQuestionIndex];
+  if (!question) {
+    return <SimpleEmptyScreen notice="Chưa có câu hỏi" title="Không thể mở bài kiểm tra" body="Bộ câu hỏi chưa được tạo hoặc không vượt qua kiểm tra căn cứ." />;
+  }
   const selectedAnswer = state.answers[question.id] || "";
   const isLast = state.currentQuestionIndex === quizQuestions.length - 1;
 
@@ -144,6 +147,7 @@ type ReviewScreenProps = {
 };
 
 export function ReviewScreen({ state, sourceFileName, onRetryQuiz, onBackToLesson, onOpenFeedback, onFlagFeedback, onJumpToSource }: ReviewScreenProps) {
+  const quizQuestions = state.generatedQuestions;
   const score = scoreQuiz(quizQuestions, state.answers);
   return (
     <div className="flow-wrap">

@@ -1983,7 +1983,9 @@ select:focus-visible,
 }
 
 .lesson-sidebar.is-collapsed .materials-heading > div,
+.lesson-sidebar.is-collapsed .materials-icon,
 .lesson-sidebar.is-collapsed .source-catalog,
+.tutor-sidebar.is-collapsed .tutor-icon,
 .tutor-sidebar.is-collapsed .tutor-heading-title > div,
 .tutor-sidebar.is-collapsed .tutor-context,
 .tutor-sidebar.is-collapsed .tutor-quiz-entry,
@@ -2006,6 +2008,10 @@ select:focus-visible,
 
 .tutor-sidebar.is-collapsed .tutor-actions {
   justify-content: center;
+}
+
+.tutor-content {
+  display: contents;
 }
 
 .app-screen-lesson .reader-main {

@@ -1,5 +1,7 @@
 export type ThemeMode = "light" | "dark";
 
+export type LanguageMode = "vi" | "en";
+
 export type Screen = "lesson" | "processing" | "quiz" | "review" | "insufficient" | "error";
 
 export type ReaderMode = "read" | "pen";
@@ -43,6 +45,35 @@ export type QuizQuestion = {
   };
 };
 
+export type GenerateQuizResult =
+  | {
+      status: "ready";
+      traceId: string;
+      model: string;
+      questions: QuizQuestion[];
+      usage?: { promptTokens?: number; outputTokens?: number };
+    }
+  | {
+      status: "insufficient_content";
+      traceId: string;
+      model: string;
+      reason: string;
+      suggestions: string[];
+    }
+  | {
+      status: "out_of_scope";
+      traceId: string;
+      model: string;
+      reason: string;
+    }
+  | {
+      status: "generation_failed";
+      traceId: string;
+      model: string;
+      retryable: boolean;
+      reason: string;
+    };
+
 export type SlideCatalogEntry = {
   fileName: string;
   sizeBytes: number;
@@ -65,7 +96,7 @@ export type DemoState = {
   readerMode: ReaderMode;
   noteCount: number;
   theme: ThemeMode;
-  languageMenuOpen: boolean;
+  language: LanguageMode;
   profileOpen: boolean;
   tutorHistoryOpen: boolean;
   tutorDraft: string;
@@ -78,6 +109,7 @@ export type DemoState = {
   rightPanelCollapsed: boolean;
   scenario: QuizScenario;
   processingStage: ProcessingStage;
+  generatedQuestions: QuizQuestion[];
   currentQuestionIndex: number;
   answers: Record<string, string>;
   feedbackOpenFor: string | null;
