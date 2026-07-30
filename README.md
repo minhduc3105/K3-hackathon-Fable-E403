@@ -5,6 +5,36 @@
 - Thời lượng: **1,5 ngày** (một ngày build + một buổi demo)
 - Nhóm: **4-5 người** · zone tối đa 5 nhóm · thi theo lớp
 
+## Bài nộp VLearn Recall Check
+
+- Prototype: `codebase/`
+- AI Spec: `spec.md`
+- Evidence mining: `evidence/mining-log.md`
+- Eval: `eval/`
+- Validation: `validation/`
+- Reflection: `reflection/`
+- Kịch bản demo 5 phút: `demo-script.md`
+- Đối chiếu điểm: `rubric-audit.md`
+
+### Thành viên và phân công
+
+| Họ tên | Mã học viên | Phần phụ trách | Artifact giải thích được |
+|---|---|---|---|
+| Lã Minh Đức | `23020526` | Product UI, CP2, React migration và accessibility | `codebase/src/features/quiz-from-slides/components/`, `codebase/src/styles/app.css`, commit `35983a8`, `d92c76e` |
+| Lâm Việt Hoàng | `2A202601067` | Prototype flow, quiz components và state model | Nhánh `hoang`, commit `1d96398`, `a97f197` |
+| Phó Viết Tiến Anh | `2A202601341` | Tích hợp CP3, AI flow và khung demo | Nhánh `tienanh`, commit `880e17d` |
+| Trần Huy Hoàng | `[CẦN MÃ HỌC VIÊN]` | OpenRouter, golden set, eval runner, spec và tích hợp cuối | `codebase/app/api/quiz/`, `eval/`, `spec.md`, commit `4ea9c42` |
+
+Mã `23020526` của Lã Minh Đức được đối chiếu từ email commit Git. Mã của Trần Huy Hoàng chưa có trong repo hoặc lịch sử commit và cần được nhóm cung cấp.
+
+### Willing users dự kiến
+
+`[CẦN ÍT NHẤT 3 TÊN THẬT NGOÀI NHÓM; KHÔNG ĐƯỢC BỊA]`
+
+### Tự kiểm tra bài nộp
+
+Chạy `cd codebase && npm run rubric:check`. Gate này kiểm tra cấu trúc, golden set, kết quả eval, UI accessibility, validation, reflection, slide PDF, placeholder và data pack bị track. Trạng thái checkpoint đúng hạn vẫn phải đối chiếu trên hệ thống nộp bài của khoá.
+
 ## Bắt đầu từ đâu?
 
 1. Đọc **`01-de-bai.md`** để chọn hướng và hiểu tiêu chí.

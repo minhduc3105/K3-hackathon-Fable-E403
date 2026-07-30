@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "eval:check": "node ../eval/check-golden-set.mjs",
-    "eval:cp3": "node ../eval/run-cp3-eval.mjs"
+    "eval:cp3": "node ../eval/run-cp3-eval.mjs",
+    "rubric:check": "node ../evidence/check-submission.mjs"
   },
   "dependencies": {
     "next": "^15.4.0",

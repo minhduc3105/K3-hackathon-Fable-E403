@@ -60,7 +60,7 @@ http://localhost:3002/course/comp2010/reader?lectureId=Lecture_material_ms204v3b
 
 ## Nguồn dữ liệu và AI thật
 
-Hai file trong `data/vlearn-pack/slides` được đọc ở server side và hiển thị trong sidebar nguồn dữ liệu. Chúng là catalog thật của prototype, còn quiz flow vẫn dùng mock lesson để demo ổn định.
+Hai file trong `data/vlearn-pack/slides` do ban tổ chức cấp được đọc ở server side và hiển thị trong sidebar nguồn dữ liệu. Data pack được giữ cục bộ và bị loại khỏi Git theo quy định bảo mật; sau khi clone, thành viên có quyền truy cập cần đặt lại pack vào `data/vlearn-pack/`. Khi pack chưa có, prototype dùng catalog fallback để UI vẫn khởi động nhưng route PDF không có file để trả về.
 
 Ở CP3, extraction được mock bằng các excerpt ngắn có kiểm soát từ data pack. Quyết định đủ căn cứ và bốn câu MCQ được tạo qua OpenRouter tại server route `app/api/quiz/generate/route.ts`. Output chỉ được đưa tới UI sau khi vượt qua schema và kiểm tra source excerpt nguyên văn.
 
@@ -72,6 +72,12 @@ Chạy eval CP3 khi server dùng port 3002:
 $env:EVAL_BASE_URL="http://localhost:3002"
 npm run eval:check
 npm run eval:cp3
+```
+
+Kiểm tra toàn bộ gate bài nộp có thể tự động hóa:
+
+```powershell
+npm run rubric:check
 ```
 
 ## Tương tác đã bật

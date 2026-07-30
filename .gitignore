@@ -2,3 +2,10 @@
 node_modules/
 *.env
 .env.local
+*.tsbuildinfo
+
+# Ban tổ chức cấp riêng; giữ trên máy để mining nhưng không đưa vào bài nộp.
+data/
+
+# File tạm khi render/kiểm tra deck.
+.tmp/

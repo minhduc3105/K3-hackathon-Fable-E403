@@ -2,29 +2,30 @@
 
 Hướng: A - VLearn
 Loại: Tối ưu tính năng có sẵn
-Nhóm / Zone: `[CẦN NHÓM CUNG CẤP]`
+Nhóm / Zone: `Fable-E403` (suy ra từ tên repository; nhóm cần xác nhận nếu hệ thống dùng mã khác)
 
 ## §1. User & Job
 
 - Job executor: học viên vừa học xong hoặc vừa đọc xong một đoạn slide trong VLearn.
 - Core JTBD: sau khi học xong một phần, học viên muốn kiểm tra mình còn nhớ đúng ý chính nào trước khi chuyển sang nội dung tiếp theo.
 - Problem statement: học viên đang đọc slide nhưng chưa có một bước tự kiểm tra nhanh, có căn cứ ngay trong reader; việc tự nghĩ câu hỏi hoặc chuyển sang công cụ khác làm đứt mạch học và khó biết câu trả lời có bám bài hay không.
-- Evidence mining ban đầu:
+- Evidence mining chuẩn B: `evidence/mining-log.md`; phương pháp có thể chạy lại bằng `node evidence/analyze-chatlog.mjs`.
   - Data pack có 1.261 lượt hỏi của 369 user trong 585 hội thoại.
-  - 46,2% câu trả lời tutor không có citation; đây là tín hiệu về nhu cầu grounding, chưa phải bằng chứng trực tiếp rằng mọi học viên muốn quiz.
-  - Các turn như `T1201`, `T0769`, `T1258` cho thấy yêu cầu quá ngắn hoặc retrieval sai trang dẫn đến fallback không hữu ích.
-  - Các turn `T0984`, `T0076`, `T0520`, `T0999`, `T0138` cho thấy học viên thường yêu cầu giải thích hoặc ôn lại một khái niệm ngay tại slide.
+  - 1.074 turn `review_concept` đến từ 326 user; 448 câu trả lời trong nhóm này thiếu citation.
+  - 134 yêu cầu khớp tóm tắt/ôn tập tường minh đến từ 98 user; 87 câu trả lời thiếu citation.
+  - Toàn bộ Tutor có 582/1.261 câu trả lời thiếu citation (46,2%); đây là tín hiệu về nhu cầu grounding, không phải tuyên bố rằng mọi học viên muốn quiz.
+  - Năm ví dụ nguyên văn có mã đối chiếu: `T0663`, `T0896`, `T1201`, `T1190`, `T0984`.
 
 ## §2. Impact & quyết định chọn
 
-| Ứng viên | Evidence hiện có | Tần suất / tổn thất | Khả thi |
-|---|---|---|---|
-| Quiz tự kiểm tra từ slide | Nhiều lượt hỏi giải thích/tóm tắt khái niệm tại trang đang xem | Lặp lại trong flow học; chuyển context làm đứt mạch | Cao với mock extraction + AI generation |
-| Tự động tóm tắt toàn bộ bài | Có các turn yêu cầu tóm tắt | Dễ tạo output dài; khó biết người học nhớ gì | Cao nhưng ít phản hồi chủ động |
-| AI Tutor hỏi đáp mở | Đã tồn tại trong VLearn | Citation rỗng ở 46,2% câu trả lời; phạm vi rộng | Đã có, không phải lát cắt mới |
+| Ứng viên | Bao nhiêu người | Tần suất | Tổn thất mỗi lượt / proxy đo được | Quyết định |
+|---|---:|---:|---:|---|
+| Quiz tự kiểm tra từ slide | 326 user có turn `review_concept` | 1.074 turn; 3,29 turn/user | Mỗi lượt thiếu nguồn buộc tự dò lại slide; xảy ra 448/1.074 lượt (41,7%) | Chọn: output hẹp, có source và đo được |
+| Tự động tóm tắt toàn bộ bài | 98 user khớp quy tắc tóm tắt/ôn tập | 134 turn; 1,37 turn/user | Mỗi lượt thiếu nguồn không kiểm chứng được bản tóm tắt; xảy ra 87/134 lượt (64,9%) | Loại: độ phủ thấp hơn và ít tạo recall chủ động |
+| Xây lại AI Tutor hỏi đáp mở | 369 user | 1.261 turn; 3,42 turn/user | Mỗi lượt thiếu nguồn buộc tìm lại căn cứ; xảy ra 582/1.261 lượt (46,2%) | Loại: đã tồn tại, phạm vi rộng và khó đo |
 
-- Ứng viên loại: xây một Tutor chat mới, vì VLearn đã có Tutor và phạm vi quá rộng cho checkpoint.
-- Ứng viên chọn: quiz tự kiểm tra có source, vì đây là một quyết định AI hẹp, đo được bằng schema và grounding.
+- Ứng viên chọn: quiz tự kiểm tra có source, vì proxy nhu cầu ôn/giải thích phủ 326 user và quyết định AI đủ hẹp để đo bằng schema, grounding và refusal.
+- Ứng viên loại được giữ lại cùng lý do bằng số trong bảng; log và quy tắc đếm nằm tại `evidence/mining-log.md`.
 
 ## §3. Giải pháp tương tự đã nghiên cứu
 
@@ -103,11 +104,13 @@ Không điền số giả. Bảng này chỉ cập nhật từ file run do `npm 
 
 ## §8. Phân công & kế hoạch
 
-- Spec: `[CẦN TÊN]`
-- Evidence: `[CẦN TÊN]`
-- Prompt + golden set: `[CẦN TÊN]`
-- Code + eval runner: `[CẦN TÊN]`
-- Demo: `[CẦN TÊN]`
+- Spec: Trần Huy Hoàng.
+- Evidence: Trần Huy Hoàng; cả nhóm đối chiếu ví dụ nguyên văn.
+- Prompt + golden set: Trần Huy Hoàng.
+- Code + eval runner: Trần Huy Hoàng.
+- Product UI + accessibility: Lã Minh Đức.
+- Prototype flow/components: Lâm Việt Hoàng.
+- Tích hợp CP3 + demo: Phó Viết Tiến Anh.
 - Willing users: `[CẦN ÍT NHẤT 3 TÊN, KHÔNG ĐƯỢC BỊA]`
 - Multi-prototype: đã chọn conditional generation thay cho luôn tạo quiz; lý do là cost-of-error của câu hỏi sai cao hơn lợi ích của việc luôn có output.
 
