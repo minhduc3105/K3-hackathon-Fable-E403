@@ -3,6 +3,7 @@ import { generateGroundedQuiz } from "@/features/quiz-from-slides/server/openrou
 import { getControlledSourceContext } from "@/features/quiz-from-slides/server/source-context";
 
 const MAX_CONTEXT_LENGTH = 12_000;
+const ALLOWED_QUESTION_COUNTS = [4, 6, 8] as const;
 
 export async function POST(request: Request) {
   const traceId = crypto.randomUUID();
@@ -11,6 +12,21 @@ export async function POST(request: Request) {
     const body = await request.json() as Record<string, unknown>;
     const sourceFileName = typeof body.sourceFileName === "string" ? body.sourceFileName : "";
     const learnerIntent = typeof body.learnerIntent === "string" ? body.learnerIntent.slice(0, 500) : undefined;
+    const questionCount = body.questionCount === undefined
+      ? 4
+      : ALLOWED_QUESTION_COUNTS.includes(body.questionCount as (typeof ALLOWED_QUESTION_COUNTS)[number])
+        ? body.questionCount as (typeof ALLOWED_QUESTION_COUNTS)[number]
+        : null;
+
+    if (questionCount === null) {
+      return NextResponse.json({
+        status: "generation_failed",
+        traceId,
+        model: process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash-lite",
+        retryable: false,
+        reason: "Số câu hỏi phải là 4, 6 hoặc 8.",
+      }, { status: 400 });
+    }
     const evalContext = body.purpose === "cp3-eval" && typeof body.sourceContext === "string"
       ? body.sourceContext.trim().slice(0, MAX_CONTEXT_LENGTH)
       : "";
@@ -34,6 +50,7 @@ export async function POST(request: Request) {
       sourceTitle,
       sourceText,
       learnerIntent,
+      questionCount,
       traceId,
     });
 

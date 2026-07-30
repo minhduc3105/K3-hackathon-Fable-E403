@@ -3,7 +3,7 @@
 Prototype cho lát cắt:
 
 ```text
-Mở học liệu trong VLearn -> AI đọc tài liệu đang học -> sinh MCQ 4 đáp án -> học viên làm ngay trong reader
+Mở học liệu trong VLearn -> chọn 4/6/8 câu -> AI đọc tài liệu đang học -> sinh MCQ 4 đáp án -> học viên làm ngay trong reader
 ```
 
 Không có bước upload thủ công. Tài liệu đang được chọn trong sidebar là nguồn duy nhất để tạo quiz.
@@ -31,7 +31,7 @@ Mở `http://localhost:3002`. Route gốc tự chuyển tới reader của bài 
 1. Mở reader; chọn `d1-slide-hackathon.pdf` hoặc `d2-slide-hackathon.pdf` trong panel học liệu.
 2. Dùng reader để đổi trang, zoom, chuyển chế độ đọc/ghi chú hoặc hỏi VLearn Tutor.
 3. Trong panel `VLearn Tutor`, bấm `Tạo câu hỏi ôn tập`.
-4. Theo dõi AI đọc chính học liệu đang mở, tạo 4 câu MCQ, làm bài và xem kết quả.
+4. Chọn 4, 6 hoặc 8 câu, theo dõi AI đọc chính học liệu đang mở, làm bài và xem kết quả.
 5. Trong review, bấm nguồn của từng câu để quay về đúng slide trong reader.
 
 ## Các nhánh trạng thái
@@ -62,7 +62,7 @@ http://localhost:3002/course/comp2010/reader?lectureId=Lecture_material_ms204v3b
 
 Hai file trong `data/vlearn-pack/slides` do ban tổ chức cấp được đọc ở server side và hiển thị trong sidebar nguồn dữ liệu. Data pack được giữ cục bộ và bị loại khỏi Git theo quy định bảo mật; sau khi clone, thành viên có quyền truy cập cần đặt lại pack vào `data/vlearn-pack/`. Khi pack chưa có, prototype dùng catalog fallback để UI vẫn khởi động nhưng route PDF không có file để trả về.
 
-Ở CP3, extraction được mock bằng các excerpt ngắn có kiểm soát từ data pack. Quyết định đủ căn cứ và bốn câu MCQ được tạo qua OpenRouter tại server route `app/api/quiz/generate/route.ts`. Output chỉ được đưa tới UI sau khi vượt qua schema và kiểm tra source excerpt nguyên văn.
+Ở CP3, extraction được mock bằng các excerpt ngắn có kiểm soát từ data pack. Quyết định đủ căn cứ và MCQ được tạo qua OpenRouter tại server route `app/api/quiz/generate/route.ts`. UI cho phép chọn 4/6/8 câu; API bắt buộc model trả đúng số đã chọn. Eval CP3 tiếp tục dùng mặc định 4 câu để giữ khả năng so sánh. Output chỉ được đưa tới UI sau khi vượt qua schema và kiểm tra source excerpt nguyên văn.
 
 Sao chép `.env.example` thành `.env.local` và điền `OPENROUTER_API_KEY`. Không commit file `.env.local`.
 

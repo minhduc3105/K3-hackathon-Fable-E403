@@ -83,8 +83,22 @@ const workbench = read("codebase/src/features/quiz-from-slides/components/workbe
 check("UI: nút Quay lại có aria-label", /aria-label="Quay lại"/.test(topbar), "topbar.tsx");
 check("UI: học liệu có nhãn thu/mở rộng", /Thu gọn học liệu/.test(sidebars) && /Mở rộng học liệu/.test(sidebars), "sidebars.tsx");
 check("UI: Tutor có nhãn thu/mở rộng", /Thu gọn VLearn Tutor/.test(sidebars) && /Mở rộng VLearn Tutor/.test(sidebars), "sidebars.tsx");
-check("UI: icon ▣ chỉ render khi chưa thu gọn", /!collapsed\s*\?\s*\([\s\S]*?▣[\s\S]*?\)\s*:\s*null/.test(sidebars), "sidebars.tsx");
+check(
+  "UI: icon panel chỉ render khi chưa thu gọn",
+  /!collapsed\s*\?\s*\([\s\S]*?materials-icon[\s\S]*?\)\s*:\s*null/.test(sidebars)
+    && /!collapsed\s*\?\s*\([\s\S]*?tutor-icon[\s\S]*?\)\s*:\s*null/.test(sidebars),
+  "sidebars.tsx",
+);
 check("UI: nút ngôn ngữ đổi VI ↔ EN", /state\.language === "vi" \? "VI" : "EN"/.test(topbar) && /language: state\.language === "vi" \? "en" : "vi"/.test(workbench), "topbar.tsx + workbench.tsx");
+check(
+  "UI/API: chọn 4/6/8 câu được truyền tới model",
+  /option value=\{4\}/.test(sidebars)
+    && /option value=\{6\}/.test(sidebars)
+    && /option value=\{8\}/.test(sidebars)
+    && /questionCount: state\.quizQuestionCount/.test(workbench)
+    && /ALLOWED_QUESTION_COUNTS = \[4, 6, 8\]/.test(read("codebase/app/api/quiz/generate/route.ts")),
+  "sidebars.tsx + workbench.tsx + API route",
+);
 
 const feedback = read("validation/feedback-log.md");
 const feedbackRows = feedback.split(/\r?\n/).filter((line) => /^\|\s*\d+\s*\|/.test(line));

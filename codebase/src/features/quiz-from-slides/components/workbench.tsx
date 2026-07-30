@@ -91,7 +91,7 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog,
       updateState({
         screen: "insufficient",
         scenario: "insufficient",
-        errorMessage: "Kịch bản demo: học liệu có quá ít chữ rõ ràng để tạo đủ bốn câu hỏi có căn cứ.",
+        errorMessage: `Kịch bản demo: học liệu có quá ít chữ rõ ràng để tạo đủ ${state.quizQuestionCount} câu hỏi có căn cứ.`,
       }, true);
       generationController.current = null;
       return;
@@ -115,6 +115,7 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog,
         body: JSON.stringify({
           sourceFileName,
           sourcePage: state.currentPage,
+          questionCount: state.quizQuestionCount,
         }),
         signal: controller.signal,
       });
@@ -272,6 +273,7 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog,
           onTutorDraftChange={(value) => setState((current) => ({ ...current, tutorDraft: value }))}
           onSendTutor={sendTutorMessage}
           onStartQuizGeneration={() => { void startProcessing(); }}
+          onQuestionCountChange={(questionCount) => updateState({ quizQuestionCount: questionCount })}
           onDismissNotice={() => updateState({ notice: "" })}
           notice={state.notice}
           collapsed={state.rightPanelCollapsed}

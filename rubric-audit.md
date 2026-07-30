@@ -8,7 +8,7 @@
 | R1.2 | Pain cụ thể ai - việc - vướng - hậu quả | 3 | Đạt | `spec.md` §1 |
 | R1.3 | Impact ≥3 ứng viên có số | 3 | Đạt | `spec.md` §2: 326/98/369 user, tần suất và số câu thiếu citation |
 | R1.4 | Giữ ứng viên loại + lý do bằng số | 3 | Đạt | `spec.md` §2 và `evidence/mining-log.md` |
-| R2.1 | Lát cắt đúng format một câu | 3 | Đạt | `spec.md` §4; khớp flow reader → AI → 4 MCQ → review |
+| R2.1 | Lát cắt đúng format một câu | 3 | Đạt | `spec.md` §4; khớp flow reader → chọn 4/6/8 câu → AI → review |
 | R2.2 | ≥3 non-goals, build không vi phạm | 2 | Đạt | `spec.md` §4 có 4 non-goals |
 | R2.3 | Automation + cost-of-error | 4 | Đạt | Conditional automation, từ chối khi không đủ căn cứ; `spec.md` §4 |
 | R2.4 | ≥4 HAX/PAIR trỏ vào prototype | 6 | Đạt | 6 mapping tại `spec.md` §4b; màn processing/review/flag/insufficient/error |

@@ -109,6 +109,7 @@ export type DemoState = {
   rightPanelCollapsed: boolean;
   scenario: QuizScenario;
   processingStage: ProcessingStage;
+  quizQuestionCount: 4 | 6 | 8;
   generatedQuestions: QuizQuestion[];
   currentQuestionIndex: number;
   answers: Record<string, string>;

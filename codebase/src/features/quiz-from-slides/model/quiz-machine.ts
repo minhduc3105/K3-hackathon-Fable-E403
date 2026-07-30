@@ -31,6 +31,7 @@ export const initialState: DemoState = {
   rightPanelCollapsed: false,
   scenario: "normal",
   processingStage: 0,
+  quizQuestionCount: 4,
   generatedQuestions: [],
   currentQuestionIndex: 0,
   answers: {},

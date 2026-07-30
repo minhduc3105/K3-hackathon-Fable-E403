@@ -1,3 +1,4 @@
+import { Check, FilePdf } from "@phosphor-icons/react";
 import type { SlideCatalogEntry } from "../model/types";
 
 type SourceCatalogProps = {
@@ -30,14 +31,14 @@ export function SourceCatalog({ files, onSelect, activeFileName }: SourceCatalog
             className={`source-catalog-item ${activeFileName === file.fileName ? "is-current" : ""}`}
             onClick={() => onSelect(file.fileName)}
           >
-            <span className="source-catalog-dot" aria-hidden="true" />
+            <FilePdf className="source-catalog-icon" size={17} aria-hidden="true" />
             <span>
               <strong>{file.fileName}</strong>
               <small>
                 {file.pageCount} trang · {formatBytes(file.sizeBytes)}
               </small>
             </span>
-            {activeFileName === file.fileName ? <span>✓</span> : null}
+            {activeFileName === file.fileName ? <Check size={16} weight="bold" aria-hidden="true" /> : null}
           </button>
         ))}
       </div>

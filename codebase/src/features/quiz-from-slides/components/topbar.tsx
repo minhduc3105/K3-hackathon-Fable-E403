@@ -1,3 +1,4 @@
+import { ArrowLeft, Moon, Sun } from "@phosphor-icons/react";
 import { lesson } from "../data/lesson-fixture";
 import type { DemoState } from "../model/types";
 
@@ -26,7 +27,7 @@ export function Topbar({
     <header className="topbar">
       <div className="topbar-leading">
         <button className="icon-button" type="button" onClick={onBack} aria-label="Quay lại" title="Quay lại">
-          ‹
+          <ArrowLeft size={18} />
         </button>
         <div className="brand-lockup">
           <span className="brand-mark">V</span>
@@ -50,7 +51,7 @@ export function Topbar({
           {state.language === "vi" ? "VI" : "EN"}
         </button>
         <button className="icon-button" type="button" onClick={onToggleTheme} aria-label="Đổi giao diện">
-          {state.theme === "dark" ? "☀" : "◐"}
+          {state.theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>
         <div className="popover-anchor">
           <button className="avatar-label" type="button" onClick={onToggleProfile} aria-expanded={state.profileOpen}>

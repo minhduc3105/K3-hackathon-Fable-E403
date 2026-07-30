@@ -1,3 +1,13 @@
+import {
+  BookOpenText,
+  CaretLeft,
+  CaretRight,
+  ClockCounterClockwise,
+  PaperPlaneRight,
+  Plus,
+  Robot,
+  X,
+} from "@phosphor-icons/react";
 import type { DemoState, SlideCatalogEntry, TutorMessage } from "../model/types";
 import { SourceCatalog } from "./source-catalog";
 
@@ -21,6 +31,7 @@ type TutorSidebarProps = {
   onTutorDraftChange: (value: string) => void;
   onSendTutor: () => void;
   onStartQuizGeneration: () => void;
+  onQuestionCountChange: (questionCount: 4 | 6 | 8) => void;
   onDismissNotice: () => void;
   notice: string;
   collapsed: boolean;
@@ -41,7 +52,7 @@ export function LessonSidebar({
       <div className="materials-heading">
         {!collapsed ? (
           <>
-            <span className="materials-icon" aria-hidden="true">▣</span>
+            <span className="materials-icon" aria-hidden="true"><BookOpenText size={19} weight="duotone" /></span>
             <div>
               <h2>Học liệu môn học</h2>
               <p>Slide PDF của buổi đang học</p>
@@ -57,7 +68,7 @@ export function LessonSidebar({
           aria-controls={lessonPanelId}
           title={collapsed ? "Mở rộng học liệu" : "Thu gọn học liệu"}
         >
-          {collapsed ? "›" : "‹"}
+          {collapsed ? <CaretRight size={17} /> : <CaretLeft size={17} />}
         </button>
       </div>
       {!collapsed ? (
@@ -81,6 +92,7 @@ export function TutorSidebar({
   onTutorDraftChange,
   onSendTutor,
   onStartQuizGeneration,
+  onQuestionCountChange,
   onDismissNotice,
   notice,
   collapsed,
@@ -93,7 +105,7 @@ export function TutorSidebar({
       <div className="tutor-heading">
         {!collapsed ? (
           <div className="tutor-heading-title">
-            <span className="tutor-icon" aria-hidden="true">▣</span>
+            <span className="tutor-icon" aria-hidden="true"><Robot size={19} weight="duotone" /></span>
             <div>
               <h2>VLearn Tutor</h2>
               <span><i />Trợ lý học theo ngữ cảnh</span>
@@ -110,12 +122,12 @@ export function TutorSidebar({
             aria-controls={tutorPanelId}
             title={collapsed ? "Mở rộng VLearn Tutor" : "Thu gọn VLearn Tutor"}
           >
-            {collapsed ? "‹" : "›"}
+            {collapsed ? <CaretLeft size={17} /> : <CaretRight size={17} />}
           </button>
           {!collapsed ? (
             <>
-              <button className="icon-button" type="button" onClick={onToggleHistory} aria-label="Lịch sử">◷</button>
-              <button className="icon-button" type="button" onClick={onNewChat} aria-label="Cuộc hội thoại mới">+</button>
+              <button className="icon-button" type="button" onClick={onToggleHistory} aria-label="Lịch sử"><ClockCounterClockwise size={17} /></button>
+              <button className="icon-button" type="button" onClick={onNewChat} aria-label="Cuộc hội thoại mới"><Plus size={17} /></button>
             </>
           ) : null}
         </div>
@@ -128,7 +140,22 @@ export function TutorSidebar({
           <section className="tutor-quiz-entry" aria-label="Tạo câu hỏi ôn tập">
             <span className="eyebrow">Ôn tập từ học liệu</span>
             <p>{sourceFileName}</p>
-            <button className="primary-button" type="button" onClick={onStartQuizGeneration}>Tạo câu hỏi ôn tập</button>
+            <label className="quiz-count-field" htmlFor="quiz-question-count">
+              <span>Số câu hỏi</span>
+              <select
+                id="quiz-question-count"
+                value={state.quizQuestionCount}
+                onChange={(event) => onQuestionCountChange(Number(event.target.value) as 4 | 6 | 8)}
+                disabled={state.screen === "processing"}
+              >
+                <option value={4}>4 câu</option>
+                <option value={6}>6 câu</option>
+                <option value={8}>8 câu</option>
+              </select>
+            </label>
+            <button className="primary-button" type="button" onClick={onStartQuizGeneration} disabled={state.screen === "processing"}>
+              Tạo {state.quizQuestionCount} câu ôn tập
+            </button>
           </section>
           {state.tutorHistoryOpen ? (
             <div className="tutor-history">
@@ -155,12 +182,12 @@ export function TutorSidebar({
               placeholder="Nhập câu hỏi về slide đang mở..."
               aria-label="Câu hỏi cho VLearn Tutor"
             />
-            <button type="button" onClick={onSendTutor} aria-label="Gửi câu hỏi">➤</button>
+            <button type="button" onClick={onSendTutor} aria-label="Gửi câu hỏi"><PaperPlaneRight size={17} weight="fill" /></button>
           </div>
           {notice ? (
             <div className="notice" role="status">
               <span>{notice}</span>
-              <button type="button" aria-label="Đóng thông báo" onClick={onDismissNotice}>×</button>
+              <button type="button" aria-label="Đóng thông báo" onClick={onDismissNotice}><X size={15} /></button>
             </div>
           ) : null}
         </div>

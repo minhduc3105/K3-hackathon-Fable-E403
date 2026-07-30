@@ -34,18 +34,18 @@ Nhóm / Zone: `Fable-E403` (suy ra từ tên repository; nhóm cần xác nhận
 
 ## §4. Thiết kế
 
-- Lát cắt một câu: một học viên vừa đọc slide bấm tự kiểm tra; AI quyết định nguồn có đủ căn cứ và tạo đúng bốn MCQ; học viên làm và xem đáp án kèm nguồn ngay trong VLearn.
+- Lát cắt một câu: một học viên vừa đọc slide chọn 4, 6 hoặc 8 câu rồi bấm tự kiểm tra; AI quyết định nguồn có đủ căn cứ và tạo đúng số MCQ đã chọn; học viên làm và xem đáp án kèm nguồn ngay trong VLearn.
 - Non-goals:
   - Không thay thế VLearn Tutor.
   - Không chấm mức độ thành thạo hoặc tính điểm học phần.
   - Không tạo câu hỏi từ kiến thức ngoài học liệu.
   - Không xây dashboard, leaderboard hoặc công cụ soạn bài cho giảng viên.
 - Mức prototype: Mock.
-  - Thật: lời gọi Gemini ở quyết định đủ căn cứ và sinh MCQ; schema validation; kiểm tra excerpt nguyên văn; flow làm bài và review.
+  - Thật: lời gọi Gemini ở quyết định đủ căn cứ và sinh đúng số MCQ người học chọn; schema validation; kiểm tra excerpt nguyên văn; flow làm bài và review.
   - Mock có kiểm soát: extraction PDF được thay bằng các excerpt ngắn từ data pack, có nhãn slide; hai trạng thái low-confidence/failure có fixture deterministic qua query `demoScenario`; chưa upload hoặc OCR file tùy ý.
 - Automation: conditional.
   - Cost-of-error là học viên ghi nhớ sai kiến thức.
-  - Hệ thống chỉ tạo quiz khi có thể sinh đủ bốn câu có source; nếu không thì từ chối có lý do.
+  - Hệ thống chỉ tạo quiz khi có thể sinh đủ 4, 6 hoặc 8 câu theo lựa chọn, mỗi câu có source; nếu không thì từ chối có lý do.
 
 ### §4b. Nguyên tắc áp dụng
 
@@ -73,7 +73,7 @@ Nhóm / Zone: `Fable-E403` (suy ra từ tên repository; nhóm cần xác nhận
 
 ## §6. Bốn đường đi trải nghiệm
 
-- Happy path: nguồn đủ rõ -> Gemini tạo bốn câu -> schema và grounding pass -> làm quiz -> review có source.
+- Happy path: nguồn đủ rõ -> Gemini tạo đúng số câu đã chọn -> schema và grounding pass -> làm quiz -> review có source.
 - Low-confidence: nguồn quá ít hoặc mâu thuẫn -> không tạo quiz -> nói lý do và quay lại học liệu; demo ổn định bằng `demoScenario=insufficient`.
 - Failure: API key thiếu, rate limit hoặc provider lỗi -> màn hình lỗi cụ thể -> thử lại mà không chọn lại nguồn; demo ổn định bằng `demoScenario=failure`.
 - Correction: từ review, học viên flag “không có trong slide”, “đáp án chưa rõ” hoặc “câu hỏi khó hiểu”; flow không bị chặn.
@@ -89,6 +89,7 @@ Nhóm / Zone: `Fable-E403` (suy ra từ tên repository; nhóm cần xác nhận
   - 15 case phát triển từ chatlog thật.
   - Mỗi lớp ①②③④ có 3 case.
 - Rubric kiểm chứng được: `eval/rubric.md`.
+- Eval CP3 giữ cấu hình mặc định 4 câu để so sánh các lượt chạy nhất quán; UI cho phép chọn 4/6/8 và API kiểm tra đúng số câu yêu cầu.
 - Quality bar chốt:
   - Tối thiểu 80% tổng số case pass.
   - 100% case `source_of_truth` và `domain_harm` có decision đúng.
@@ -122,3 +123,5 @@ Không điền số giả. Bảng này chỉ cập nhật từ file run do `npm 
 | CP3 | Thay fixture generation bằng Gemini server call | Đưa AI thật vào quyết định trung tâm |
 | CP3 | Thêm schema, excerpt grounding và ba decision state | Ngăn câu hỏi không có căn cứ |
 | CP3 | Thêm 22-case golden set và runner lưu mọi output | Đủ artefact đo lượt đầu, kể cả case fail |
+| Sau CP4 | Làm phẳng visual system, giảm radius/shadow và thay Unicode bằng Phosphor icons | Phản hồi trực tiếp từ nhóm: giao diện cũ bo tròn nhiều, tạo cảm giác “nhựa” |
+| Sau CP4 | Thêm lựa chọn 4/6/8 câu xuyên suốt UI -> API -> prompt -> schema | Cho người học điều chỉnh độ dài bài ôn; vẫn từ chối nếu nguồn không đủ số mục tiêu độc lập |

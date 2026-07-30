@@ -1,3 +1,12 @@
+import {
+  ArrowSquareOut,
+  CaretLeft,
+  CaretRight,
+  CornersOut,
+  DownloadSimple,
+  Minus,
+  Plus,
+} from "@phosphor-icons/react";
 import type { DemoState, LessonMaterial, SlideCatalogEntry } from "../model/types";
 import { scoreQuiz } from "../model/quiz-machine";
 
@@ -19,12 +28,12 @@ function ReaderToolbar(props: Pick<LessonScreenProps, "state" | "sourceFile" | "
     <div className="reader-toolbar">
       <span className="reader-file-label" title={props.sourceFile.fileName}>{props.sourceFile.fileName}</span>
       <span className="toolbar-divider" />
-      <button className="zoom-button" type="button" onClick={props.onZoomOut} aria-label="Thu nhỏ">−</button>
+      <button className="zoom-button" type="button" onClick={props.onZoomOut} aria-label="Thu nhỏ"><Minus size={16} /></button>
       <strong className="reader-zoom-value">{props.state.zoom}%</strong>
-      <button className="zoom-button" type="button" onClick={props.onZoomIn} aria-label="Phóng to">+</button>
-      <button className="zoom-button" type="button" onClick={props.onFitPage} aria-label="Vừa trang">□</button>
-      <button className="zoom-button" type="button" onClick={props.onDownloadMaterial} aria-label="Tải học liệu">⇩</button>
-      <button className="zoom-button" type="button" onClick={props.onOpenMaterialWindow} aria-label="Mở học liệu ở tab mới">↗</button>
+      <button className="zoom-button" type="button" onClick={props.onZoomIn} aria-label="Phóng to"><Plus size={16} /></button>
+      <button className="zoom-button" type="button" onClick={props.onFitPage} aria-label="Vừa trang"><CornersOut size={16} /></button>
+      <button className="zoom-button" type="button" onClick={props.onDownloadMaterial} aria-label="Tải học liệu"><DownloadSimple size={16} /></button>
+      <button className="zoom-button" type="button" onClick={props.onOpenMaterialWindow} aria-label="Mở học liệu ở tab mới"><ArrowSquareOut size={16} /></button>
     </div>
   );
 }
@@ -43,9 +52,9 @@ export function LessonScreen(props: LessonScreenProps) {
           title={`Slide ${props.state.currentPage} của ${props.sourceFile.fileName}`}
         />
         <div className="reader-pagination">
-          <button className="zoom-button" type="button" onClick={props.onPreviousPage} aria-label="Trang trước" disabled={props.state.currentPage <= 1}>‹</button>
+          <button className="zoom-button" type="button" onClick={props.onPreviousPage} aria-label="Trang trước" disabled={props.state.currentPage <= 1}><CaretLeft size={17} /></button>
           <span>Trang {props.state.currentPage} / {props.sourceFile.pageCount}</span>
-          <button className="zoom-button" type="button" onClick={props.onNextPage} aria-label="Trang sau" disabled={props.state.currentPage >= props.sourceFile.pageCount}>›</button>
+          <button className="zoom-button" type="button" onClick={props.onNextPage} aria-label="Trang sau" disabled={props.state.currentPage >= props.sourceFile.pageCount}><CaretRight size={17} /></button>
         </div>
       </section>
     </section>
@@ -66,7 +75,7 @@ export function ProcessingScreen({ state, sourceFileName, onCancelProcessing }: 
       <section className="flow-header">
         <span className="eyebrow">Đang xử lý học liệu hiện tại</span>
         <h1>Chuẩn bị bộ câu hỏi</h1>
-        <p>VLearn đang dùng {sourceFileName} làm nguồn duy nhất.</p>
+        <p>VLearn đang dùng {sourceFileName} làm nguồn duy nhất để tạo {state.quizQuestionCount} câu.</p>
       </section>
       <section className="flow-panel status-panel" aria-live="polite">
         <div>
