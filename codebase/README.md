@@ -10,13 +10,21 @@ Không có bước upload thủ công. Tài liệu đang được chọn trong s
 
 ## Chạy local
 
-Từ thư mục repo:
+Từ thư mục `codebase/`:
 
 ```powershell
-python -m http.server 4173 --directory codebase
+npm install
+npm run build
+npm run start -- --port 3002
 ```
 
-Mở `http://localhost:4173`.
+Nếu cần sửa UI trong lúc phát triển:
+
+```powershell
+npm run dev
+```
+
+Mở `http://localhost:3002` cho bản demo ổn định hoặc `http://localhost:3000` khi chạy dev.
 
 ## Kịch bản demo chính
 
@@ -31,6 +39,19 @@ Mở `http://localhost:4173`.
 - `Day 5 / day05-ai-product-thinking-requirements.pdf`: luồng tạo quiz thành công.
 - `Day 1 / whiteboard-scan.pdf`: học liệu toàn ảnh, hiển thị trạng thái chưa đủ căn cứ.
 - `Day 2 / day02-legacy-material.pdf`: mô phỏng lỗi trích xuất và cho phép thử lại.
+
+## Cấu trúc Next.js mới
+
+- `app/`: route và layout.
+- `src/features/quiz-from-slides/model/`: state machine và type dùng chung.
+- `src/features/quiz-from-slides/data/`: mock lesson và câu hỏi.
+- `src/features/quiz-from-slides/server/`: đọc `data/vlearn-pack/slides`.
+- `src/features/quiz-from-slides/components/`: UI React theo vùng.
+- `docs/design/`: tài liệu kiến trúc và state model.
+
+## Nguồn dữ liệu thật
+
+Hai file trong `data/vlearn-pack/slides` được đọc ở server side và hiển thị trong sidebar nguồn dữ liệu. Chúng là catalog thật của prototype, còn quiz flow vẫn dùng mock lesson để demo ổn định.
 
 ## Tương tác đã bật
 
