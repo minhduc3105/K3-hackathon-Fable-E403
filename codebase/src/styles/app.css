@@ -3,17 +3,26 @@
 }
 
 html {
+  height: 100%;
   min-width: 320px;
+  overflow: hidden;
   background: var(--surface-page);
 }
 
 body {
+  height: 100%;
   margin: 0;
+  overflow: hidden;
   background: var(--surface-page);
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.55;
+}
+
+#app {
+  height: 100%;
+  min-height: 0;
 }
 
 button,
@@ -53,7 +62,9 @@ select:focus-visible,
 }
 
 .app-shell {
-  min-height: 100dvh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .topbar {
@@ -252,7 +263,8 @@ select:focus-visible,
 
 .reader-layout {
   display: grid;
-  min-height: calc(100dvh - 64px);
+  height: calc(100dvh - 64px);
+  min-height: 0;
   grid-template-columns: 244px minmax(0, 1fr) 286px;
 }
 
@@ -262,18 +274,23 @@ select:focus-visible,
 }
 
 .app-screen-lesson .reader-layout {
-  height: calc(100dvh - 64px);
   min-height: 0;
 }
 
 .lesson-sidebar,
 .tutor-sidebar {
+  min-height: 0;
   background: var(--surface-raised);
 }
 
 .lesson-sidebar {
   padding: 25px 18px;
   border-right: 1px solid var(--line);
+}
+
+.lesson-sidebar {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .app-screen-lesson .lesson-sidebar {
@@ -458,7 +475,10 @@ select:focus-visible,
 
 .reader-main {
   min-width: 0;
+  min-height: 0;
   padding: 26px clamp(24px, 4vw, 66px) 42px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .app-screen-lesson .reader-main {
@@ -846,7 +866,10 @@ select:focus-visible,
 
 .tutor-sidebar {
   position: relative;
+  min-height: 0;
   padding-bottom: 82px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .app-screen-lesson .tutor-sidebar {
@@ -1304,9 +1327,10 @@ select:focus-visible,
 
 .choice {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: 20px 26px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
+  min-width: 0;
   min-height: 56px;
   padding: 10px 13px;
   border: 1px solid var(--line);
@@ -1328,6 +1352,8 @@ select:focus-visible,
 }
 
 .choice input {
+  width: 16px;
+  height: 16px;
   accent-color: var(--accent);
 }
 
@@ -1342,6 +1368,12 @@ select:focus-visible,
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
+}
+
+.choice-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
 }
 
 .question-footer {
@@ -1546,12 +1578,26 @@ select:focus-visible,
     grid-template-columns: 210px minmax(0, 1fr);
   }
 
-  .tutor-sidebar {
+  .tutor-sidebar,
+  .app-screen-lesson .tutor-sidebar {
     display: none;
   }
 }
 
 @media (max-width: 720px) {
+  html,
+  body,
+  #app {
+    height: auto;
+    overflow: visible;
+  }
+
+  .app-shell {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
   .app-screen-lesson {
     height: auto;
     overflow: visible;
@@ -1652,6 +1698,7 @@ select:focus-visible,
 
   .reader-layout {
     display: block;
+    height: auto;
     min-height: calc(100dvh - 58px);
   }
 
@@ -1661,6 +1708,7 @@ select:focus-visible,
 
   .reader-main {
     padding: 20px 16px 30px;
+    overflow: visible;
   }
 
   .breadcrumb {
