@@ -25,8 +25,6 @@
 | Phó Viết Tiến Anh | `2A202601341` | Tích hợp CP3, AI flow và khung demo                        | Nhánh `tienanh`, commit `880e17d`                                                                                |
 | Trần Huy Hoàng    | `2A202601709` | OpenRouter, golden set, eval runner, spec và tích hợp cuối | `codebase/app/api/quiz/`, `eval/`, `spec.md`, commit `4ea9c42`                                                   |
 
-Mã `2A202601261` của Lã Minh Đức và mã `2A202601709` của Trần Huy Hoàng do thành viên xác nhận.
-
 ### Willing users dự kiến
 
 1. Bùi Hữu Nghĩa — Học viên K3.
