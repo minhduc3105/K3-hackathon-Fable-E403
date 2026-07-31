@@ -62,7 +62,18 @@ http://localhost:3002/course/comp2010/reader?lectureId=Lecture_material_ms204v3b
 
 Hai file trong `data/vlearn-pack/slides` do ban tổ chức cấp được đọc ở server side và hiển thị trong sidebar nguồn dữ liệu. Data pack được giữ cục bộ và bị loại khỏi Git theo quy định bảo mật; sau khi clone, thành viên có quyền truy cập cần đặt lại pack vào `data/vlearn-pack/`. Khi pack chưa có, prototype dùng catalog fallback để UI vẫn khởi động nhưng route PDF không có file để trả về.
 
-Ở CP3, extraction được mock bằng các excerpt ngắn có kiểm soát từ data pack. Quyết định đủ căn cứ và MCQ được tạo qua OpenRouter tại server route `app/api/quiz/generate/route.ts`. UI cho phép chọn 4/6/8 câu; API bắt buộc model trả đúng số đã chọn. Eval CP3 tiếp tục dùng mặc định 4 câu để giữ khả năng so sánh. Output chỉ được đưa tới UI sau khi vượt qua schema và kiểm tra source excerpt nguyên văn.
+Ở CP3, extraction được mock bằng các excerpt ngắn có kiểm soát từ data pack. MCQ được tạo qua OpenRouter tại server route `app/api/quiz/generate/route.ts`. UI cho phép chọn số câu và thêm yêu cầu riêng về trọng tâm, độ khó hoặc cách hỏi. API bắt buộc model trả đúng số đã chọn. Eval CP3 tiếp tục dùng mặc định 4 câu để giữ khả năng so sánh. Output của model chỉ được đưa tới UI sau khi vượt qua schema và kiểm tra source excerpt nguyên văn.
+
+### Cách tạo quiz hiện tại
+
+1. UI gửi tên học liệu, số câu, `learnerInstructions`, nonce mới và tối đa 80 prompt đã dùng.
+2. Route lấy text có nhãn slide từ nguồn đang mở. Yêu cầu riêng của người học và source được đặt ở hai khối tách biệt để source không thể ghi đè nhiệm vụ.
+3. OpenRouter nhận system prompt bắt buộc áp dụng yêu cầu về chủ đề/độ khó/cách hỏi khi có căn cứ trong source. Mô tả kiểu flashcard được chuyển thành câu hỏi MCQ và đáp án.
+4. Response phải có đúng số câu, đúng bốn lựa chọn, một đáp án đúng, excerpt nguyên văn và số slide hợp lệ. Output sai hoặc lặp được retry tối đa ba lần.
+5. Nếu thiếu API key, provider lỗi, JSON sai, grounding fail, model từ chối hoặc tiếp tục lặp, server dùng `grounded-quiz-fallback.ts` để tạo một bộ MCQ mới trực tiếp từ các excerpt. Chế độ này vẫn giữ bốn lựa chọn, nguồn slide và ưu tiên nội dung khớp yêu cầu riêng.
+6. Prompt của quiz mới được lưu trong `sessionStorage` theo từng học liệu để lần tạo tiếp theo tránh dùng lại.
+
+Với học liệu đã trích xuất được text, API luôn trả một quiz `ready`; lỗi provider không còn đẩy người học sang màn hình lỗi. Nếu file không có bất kỳ text nào, route vẫn trả `insufficient_content` vì không có căn cứ an toàn để tạo đáp án.
 
 Sao chép `.env.example` thành `.env.local` và điền `OPENROUTER_API_KEY`. Không commit file `.env.local`.
 

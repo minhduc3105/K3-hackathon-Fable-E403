@@ -50,6 +50,7 @@ export type GenerateQuizResult =
       status: "ready";
       traceId: string;
       model: string;
+      generationMode?: "model" | "grounded_fallback";
       questions: QuizQuestion[];
       usage?: { promptTokens?: number; outputTokens?: number };
     }

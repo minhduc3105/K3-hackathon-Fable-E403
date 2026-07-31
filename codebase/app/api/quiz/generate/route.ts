@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { generateGroundedQuiz } from "@/features/quiz-from-slides/server/openrouter-quiz-provider";
+import { getControlledSourceContext } from "@/features/quiz-from-slides/server/source-context";
 
 const MAX_CONTEXT_LENGTH = 12_000;
 const MIN_QUESTION_COUNT = 1;
 const MAX_QUESTION_COUNT = 20;
+const MAX_PREVIOUS_QUESTIONS = 80;
 
 async function getPdfText(filename: string): Promise<string> {
   try {
@@ -26,13 +28,32 @@ async function getPdfText(filename: string): Promise<string> {
   }
 }
 
+function readPreviousQuestionPrompts(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim().replace(/\s+/g, " ").slice(0, 600))
+    .filter(Boolean)
+    .slice(-MAX_PREVIOUS_QUESTIONS);
+}
+
 export async function POST(request: Request) {
   const traceId = crypto.randomUUID();
 
   try {
     const body = await request.json() as Record<string, unknown>;
     const sourceFileName = typeof body.sourceFileName === "string" ? body.sourceFileName : "";
-    const learnerIntent = typeof body.learnerIntent === "string" ? body.learnerIntent.slice(0, 500) : undefined;
+    const learnerInstructionsValue = typeof body.learnerInstructions === "string"
+      ? body.learnerInstructions
+      : typeof body.learnerIntent === "string"
+        ? body.learnerIntent
+        : "";
+    const learnerInstructions = learnerInstructionsValue.trim().slice(0, 1_000);
+    const generationNonce = typeof body.generationNonce === "string" && body.generationNonce.length <= 120
+      ? body.generationNonce
+      : crypto.randomUUID();
+    const previousQuestionPrompts = readPreviousQuestionPrompts(body.previousQuestionPrompts);
     const questionCount = body.questionCount === undefined
       ? 4
       : typeof body.questionCount === "number"
@@ -57,12 +78,14 @@ export async function POST(request: Request) {
       ? body.sourceContext.trim().slice(0, MAX_CONTEXT_LENGTH)
       : "";
 
-    // Get full PDF text from extraction API
-    const pdfText = evalContext || await getPdfText(sourceFileName);
+    // Bundled slides have reviewed, text-readable excerpts. Prefer them so the
+    // learning flow is not blocked by the fragile PDF stream parser.
+    const controlledSource = evalContext ? null : getControlledSourceContext(sourceFileName);
+    const pdfText = evalContext || controlledSource?.text || await getPdfText(sourceFileName);
     const sourceText = pdfText.slice(0, MAX_CONTEXT_LENGTH);
     const sourceTitle = typeof body.sourceTitle === "string" && evalContext
       ? body.sourceTitle.slice(0, 200)
-      : sourceFileName.replace(".pdf", "");
+      : controlledSource?.title || sourceFileName.replace(".pdf", "");
 
     if (!sourceText) {
       return NextResponse.json({
@@ -77,9 +100,11 @@ export async function POST(request: Request) {
     const result = await generateGroundedQuiz({
       sourceTitle,
       sourceText,
-      learnerIntent,
+      learnerInstructions,
       questionCount,
       traceId,
+      generationNonce,
+      previousQuestionPrompts,
     });
 
     const status = result.status === "generation_failed" ? 502 : 200;
