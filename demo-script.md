@@ -4,12 +4,12 @@ Tài liệu điều phối; số liệu phải khớp artifact nguồn. Deck fin
 
 | Thời gian | Slide | Nội dung nói / thao tác | Bằng chứng |
 |---:|---:|---|---|
-| 0:00-0:45 | 1 | Học viên vừa đọc slide cần tự kiểm tra ngay trong reader. Nêu 326 user/1.074 turn ôn hoặc giải thích; đây là proxy, không phải tuyên bố mọi người muốn quiz. | `evidence/mining-log.md` |
-| 0:45-1:30 | 2 | So sánh quiz, tóm tắt và Tutor mở. Chọn quiz vì 326 user/1.074 turn và output hẹp; loại tóm tắt 98 user/134 turn; không xây lại Tutor đã có. | `spec.md` §2 |
-| 1:30-3:30 | 3 | Nêu lát cắt một câu và conditional automation. Demo happy path tại `/`, sau đó case khó tại `/?demoScenario=insufficient`; chỉ rõ AI không đoán khi thiếu nguồn. | `spec.md` §4-§6, `codebase/` |
-| 3:30-4:15 | 4 | Quality bar 80% tổng, 100% hai lớp critical, 0 ready thiếu excerpt. Baseline 11/22 (50%), lượt chính thức 22/22 (100%); failure lớn nhất của baseline là JSON format không ổn định. | `eval/runs/` |
-| 4:15-5:00 | 5 | Đọc ít nhất hai quote nguyên văn có tên/vai và nêu thay đổi đã làm. | `validation/feedback-log.md` — **chờ dữ liệu thật** |
-| sau 5:00 | 6 | Nếu được thêm một tuần: 2-3 ưu tiên gắn với feedback/failure và một bài học lớn nhất. Dùng slide này để kết và chuyển Q&A. | `validation/`, `reflection/` — **chờ dữ liệu thật** |
+| 0:00-0:40 | 1 · Lã Minh Đức | Học viên vừa đọc slide cần tự kiểm tra ngay trong reader. Nêu 326 user/1.074 turn ôn hoặc giải thích; đây là proxy, không phải tuyên bố mọi người muốn quiz. | `evidence/mining-log.md` |
+| 0:40-1:20 | 2 · Lâm Việt Hoàng | So sánh quiz, tóm tắt và Tutor mở. Chọn quiz vì 326 user/1.074 turn và output hẹp; loại tóm tắt 98 user/134 turn; không xây lại Tutor đã có. | `spec.md` §2 |
+| 1:20-3:00 | 3 · Phó Viết Tiến Anh | Nêu lát cắt một câu và conditional automation. Demo happy path tại `/`, sau đó case khó tại `/?demoScenario=insufficient`; chỉ rõ AI không đoán khi thiếu nguồn. | `spec.md` §4-§6, `codebase/` |
+| 3:00-3:55 | 4 · Trần Huy Hoàng | Quality bar 80% tổng, 100% hai lớp critical, 0 ready thiếu excerpt. Baseline 11/22 (50%), lượt chính thức 22/22 (100%); failure lớn nhất của baseline là JSON format không ổn định. | `eval/runs/` |
+| 3:55-4:35 | 5 · Phó Viết Tiến Anh | Đọc quote của Bùi Hữu Nghĩa và Hà Nhật Khánh Duy; nêu hai thay đổi đã chốt: chuẩn hóa AI Tutor về plain text và ưu tiên ô “Phần muốn ôn”. | `validation/feedback-log.md` |
+| 4:35-4:55 | 6 · Lâm Việt Hoàng | Nêu ba ưu tiên tiếp theo; kết bằng bài học “sửa hệ thống đo, không sửa số liệu” rồi chuyển Q&A. | `validation/`, `reflection/` |
 
 ## URL demo
 

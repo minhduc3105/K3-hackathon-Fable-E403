@@ -112,7 +112,7 @@ Không điền số giả. Bảng này chỉ cập nhật từ file run do `npm 
 - Product UI + accessibility: Lã Minh Đức.
 - Prototype flow/components: Lâm Việt Hoàng.
 - Tích hợp CP3 + demo: Phó Viết Tiến Anh.
-- Willing users: `[CẦN ÍT NHẤT 3 TÊN, KHÔNG ĐƯỢC BỊA]`
+- Willing users: Bùi Hữu Nghĩa, Hà Nhật Khánh Duy và Đinh Xuân Huy — đều là học viên K3 ngoài nhóm.
 - Multi-prototype: đã chọn conditional generation thay cho luôn tạo quiz; lý do là cost-of-error của câu hỏi sai cao hơn lợi ích của việc luôn có output.
 
 ## §9. Changelog
