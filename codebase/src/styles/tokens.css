@@ -1,2 +1,111 @@
-:root { color-scheme: light; --page:#eef3f8; --surface:#ffffff; --surface-soft:#f7f9fc; --ink:#162235; --muted:#64748b; --line:#dbe3ee; --accent:#145cc7; --accent-dark:#0d469f; --accent-soft:#e7f0ff; --success:#087a55; --danger:#bd3346; --warning:#a46116; --shadow:0 12px 32px rgb(29 52 84 / 10%); --radius:8px; --font:"Be Vietnam Pro", "Segoe UI Variable", "Segoe UI", sans-serif; }
-:root[data-theme="dark"] { color-scheme: dark; --page:#111a27; --surface:#182334; --surface-soft:#202e42; --ink:#edf4ff; --muted:#a8b7cc; --line:#30435d; --accent:#8bb4ff; --accent-dark:#b7d0ff; --accent-soft:#253f69; --success:#6ce2af; --danger:#ffabb4; --warning:#f1c677; --shadow:0 12px 32px rgb(0 0 0 / 25%); }
+/* VLearn — Design tokens (Blue Gradient EdTech)
+   Palette: professional blue gradient (primary) + amber CTA + emerald success.
+   Fonts: Poppins (headings) / Inter (body). Full light + dark. */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --page: #f1f5f9;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --surface-muted: #f1f5f9;
+
+  /* Text */
+  --ink: #0f172a;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+
+  /* Brand — blue gradient */
+  --accent: #3b82f6;
+  --accent-dark: #1e40af;
+  --accent-strong: #1e3a8a;
+  --accent-soft: #dbeafe;
+  --accent-2: #2563eb;
+
+  /* CTA — amber */
+  --cta: #f59e0b;
+  --cta-dark: #d97706;
+  --cta-soft: #fef3c7;
+
+  /* State */
+  --success: #10b981;
+  --success-soft: #d1fae5;
+  --danger: #ef4444;
+  --danger-soft: #fee2e2;
+  --warning: #f59e0b;
+  --warning-soft: #fef3c7;
+
+  /* On-color text */
+  --on-accent: #ffffff;
+  --on-cta: #ffffff;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 6%), 0 1px 3px rgb(15 23 42 / 8%);
+  --shadow: 0 4px 12px rgb(15 23 42 / 10%), 0 2px 4px rgb(15 23 42 / 6%);
+  --shadow-lg: 0 18px 44px rgb(15 23 42 / 16%), 0 6px 14px rgb(15 23 42 / 10%);
+  --ring: color-mix(in srgb, var(--accent) 24%, transparent);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-full: 999px;
+
+  /* Type */
+  --font: "Inter", "Be Vietnam Pro", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --font-head: "Poppins", "Inter", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+
+  /* Spacing scale (16-64 base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur: 200ms;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --page: #0f172a;
+  --surface: #1e293b;
+  --surface-soft: #334155;
+  --surface-muted: #475569;
+
+  --ink: #f1f5f9;
+  --muted: #94a3b8;
+  --line: #334155;
+  --line-strong: #475569;
+
+  --accent: #3b82f6;
+  --accent-dark: #60a5fa;
+  --accent-strong: #93c5fd;
+  --accent-soft: #1e3a8a;
+  --accent-2: #2563eb;
+
+  --cta: #fbbf24;
+  --cta-dark: #fcd34d;
+  --cta-soft: #422006;
+
+  --success: #34d399;
+  --success-soft: #064e3b;
+  --danger: #f87171;
+  --danger-soft: #450a0a;
+  --warning: #fbbf24;
+  --warning-soft: #422006;
+
+  --on-accent: #ffffff;
+  --on-cta: #1e293b;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 30%);
+  --shadow: 0 4px 14px rgb(0 0 0 / 36%);
+  --shadow-lg: 0 20px 48px rgb(0 0 0 / 50%);
+  --ring: color-mix(in srgb, var(--accent) 32%, transparent);
+}

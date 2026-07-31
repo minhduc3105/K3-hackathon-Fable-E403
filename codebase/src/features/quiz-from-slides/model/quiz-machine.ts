@@ -40,6 +40,7 @@ export const initialState: DemoState = {
   feedbackOpenFor: null,
   flagged: {},
   errorMessage: "",
+  studyCardExpanded: false,
 };
 
 export function getMaterial(materialId: string): LessonMaterial {

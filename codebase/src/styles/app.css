@@ -35,3 +35,148 @@ body.is-resizing * {
 .learning-assessment ul { display: grid; gap: 6px; max-height: 154px; margin: 0; padding-left: 18px; overflow: auto; color: var(--muted); font-size: 12px; }
 .learning-assessment li b { color: var(--ink); }
 .assessment-complete { margin-top: 10px !important; color: var(--success) !important; }
+
+/* ============================================================
+   AI-Native EdTech refinement layer
+   Overrides visual language: type, elevation, motion, color.
+   Structure/behavior untouched — semantic classes only.
+   ============================================================ */
+
+body { font-family: var(--font); font-size: 15px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+h1, h2, h3, .brand, .flow-kicker { font-family: var(--font-head); letter-spacing: -0.01em; }
+
+/* Global smooth interaction + focus */
+.icon-button, .panel-toggle, .file-item, .primary-button, .secondary-button, .text-button,
+.reader-footer button, .quiz-flow label, .attempts button, .chat-input button, .toast button {
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid var(--ring); outline-offset: 2px; border-radius: var(--radius-sm);
+}
+
+/* ---- Header ---- */
+.app-header { height: 66px; padding: 0 var(--space-5); background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); box-shadow: var(--shadow-sm); }
+.brand { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+.brand span { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(140deg, var(--accent), var(--accent-2)); color: var(--on-accent); font-weight: 800; box-shadow: 0 4px 10px color-mix(in srgb, var(--accent) 32%, transparent); }
+.header-context strong { font-size: 13px; font-weight: 600; }
+.icon-button { width: 40px; height: 40px; border-radius: 10px; border-color: var(--line); background: var(--surface); }
+.icon-button:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
+.avatar { width: 38px; height: 38px; background: linear-gradient(140deg, var(--accent-soft), var(--surface-muted)); color: var(--accent-strong); font-weight: 800; border: 1px solid var(--line); }
+
+/* ---- Panels (materials / tutor) ---- */
+.materials-panel, .tutor-panel { background: var(--surface); padding: var(--space-5) var(--space-4); }
+.panel-title h2 { font-size: 15px; font-weight: 700; }
+.panel-title p { font-size: 12px; }
+.panel-icon { width: 38px; height: 38px; border-radius: 11px; background: var(--accent-soft); color: var(--accent-strong); }
+.panel-icon-tutor { background: var(--success-soft); color: var(--success); }
+.panel-toggle { width: 38px; height: 38px; border-radius: 10px; }
+.panel-toggle:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+/* ---- File list ---- */
+.file-item { min-height: 60px; border-radius: var(--radius-sm); border-left: 3px solid transparent; padding: var(--space-2) var(--space-3); }
+.file-item:hover { background: var(--surface-soft); transform: translateX(2px); }
+.file-item.is-current { border-left-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
+.file-item strong { font-size: 12.5px; }
+
+/* ---- Reader ---- */
+.study-main { padding: var(--space-6); }
+.reader { border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; }
+.reader-toolbar { padding: var(--space-3) var(--space-4); background: var(--surface-soft); }
+.reader-footer button { color: var(--accent); font-weight: 700; border-radius: var(--radius-sm); padding: 0 10px; }
+.reader-footer button:not(:disabled):hover { background: var(--accent-soft); }
+
+/* ---- Buttons ---- */
+.primary-button { min-height: 44px; border-radius: var(--radius); background: linear-gradient(140deg, var(--accent), var(--accent-dark)); color: var(--on-accent); font-weight: 700; box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 28%, transparent); }
+.primary-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 22px color-mix(in srgb, var(--accent) 34%, transparent); }
+.primary-button:active:not(:disabled) { transform: translateY(0); }
+.secondary-button { min-height: 44px; border-radius: var(--radius); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font-weight: 600; }
+.secondary-button:hover { border-color: var(--accent); color: var(--accent-strong); background: var(--accent-soft); }
+.text-button { color: var(--accent-strong); font-weight: 700; border-radius: var(--radius-sm); }
+.text-button:hover { color: var(--accent-dark); }
+
+/* ---- Study card (self-test) ---- */
+.source-summary { padding: var(--space-4) 0; }
+.study-card { margin: var(--space-4) 0; padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(160deg, var(--accent-soft), var(--surface-soft)); box-shadow: var(--shadow-sm); }
+.study-card>div { color: var(--accent-strong); font-weight: 700; }
+.study-card input, .study-card select, .prompt-field textarea { border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); }
+.study-card input:focus, .prompt-field textarea:focus { border-color: var(--accent); }
+
+/* Study card collapsed/expanded states */
+.study-card.is-expanded { gap: 14px; }
+.study-card-trigger { width: 100%; margin-top: 4px; }
+.study-card-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.study-card-actions .text-button { padding: 8px 12px; }
+.study-card-actions .primary-button { flex: 1; }
+
+/* ---- Onboarding flow / steps ---- */
+.flow { border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+.flow-kicker { color: var(--accent-strong); font-weight: 700; letter-spacing: 0.08em; }
+.steps span { border-radius: var(--radius-full); }
+.steps .active span { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* ---- Quiz flow ---- */
+.quiz-progress strong { color: var(--accent-strong); }
+.quiz-flow label { min-height: 60px; border: 1px solid var(--line); border-radius: var(--radius); }
+.quiz-flow label:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateX(2px); }
+.quiz-flow label.selected { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.quiz-flow label span { border-radius: var(--radius-sm); }
+.quiz-flow label.selected span { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* ---- Review ---- */
+.review header>strong { width: 92px; height: 92px; border: 3px solid var(--accent); border-radius: var(--radius-full); color: var(--accent-strong); background: var(--accent-soft); font-family: var(--font-head); font-weight: 800; }
+.review-assessment { margin: 24px 0; padding: 20px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); background: linear-gradient(160deg, var(--accent-soft), var(--surface-soft)); }
+.review-assessment strong { display: block; margin-bottom: 8px; color: var(--accent-strong); font-size: 17px; font-weight: 700; }
+.review-assessment p { margin: 0 0 16px; color: var(--ink); font-size: 14px; line-height: 1.5; }
+.review-assessment h3 { margin: 16px 0 10px; color: var(--ink); font-size: 14px; font-weight: 600; }
+.review-assessment ul { display: grid; gap: 8px; margin: 0; padding-left: 20px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.review-assessment li b { color: var(--ink); font-weight: 600; }
+.review-assessment .assessment-complete { margin-top: 8px; color: var(--success); font-weight: 600; }
+.review article.correct>span { color: var(--success); }
+.review article.incorrect>span { color: var(--danger); }
+.review article div { border-left: 3px solid var(--accent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: var(--surface-soft); }
+
+/* ---- Chat ---- */
+.chat-log p { border-radius: 12px 12px 12px 4px; background: var(--surface-muted); }
+.chat-log .from-student { border-radius: 12px 12px 4px 12px; background: var(--accent-soft); color: var(--accent-strong); }
+.chat-log .typing-indicator { font-style: italic; color: var(--muted); opacity: 0.7; }
+.chat-input { border: 1px solid var(--line-strong); border-radius: var(--radius); }
+.chat-input:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
+.chat-input input:disabled { opacity: 0.6; cursor: not-allowed; }
+.chat-input button { border-radius: var(--radius-sm); background: var(--accent); color: var(--on-accent); }
+.chat-input button:hover:not(:disabled) { background: var(--accent-dark); }
+.chat-input button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---- Toast + assessment ---- */
+.toast { border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-lg); }
+.learning-assessment { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); box-shadow: var(--shadow-lg); }
+
+/* ---- Quiz Config Modal ---- */
+.modal-backdrop { position: fixed; z-index: 100; inset: 0; background: rgba(9, 20, 38, 0.64); backdrop-filter: blur(4px); }
+.quiz-config-modal { position: fixed; z-index: 101; top: 50%; left: 50%; width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 80px); padding: 0; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-lg); transform: translate(-50%, -50%); overflow: hidden; }
+.modal-close { position: absolute; top: 16px; right: 16px; z-index: 10; display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); transition: all var(--dur) var(--ease); }
+.modal-close:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.modal-header { display: flex; align-items: center; gap: 12px; padding: 24px 24px 20px; border-bottom: 1px solid var(--line); background: var(--surface-soft); color: var(--accent-strong); }
+.modal-header h2 { margin: 0; font-size: 19px; font-family: var(--font-head); font-weight: 700; }
+.modal-body { padding: 24px; max-height: calc(100vh - 280px); overflow-y: auto; }
+.config-section { margin-bottom: 24px; }
+.config-section:last-child { margin-bottom: 0; }
+.config-section h3 { margin: 0 0 10px; color: var(--ink); font-size: 14px; font-weight: 600; }
+.config-toggle { display: flex; gap: 8px; }
+.config-toggle button { flex: 1; min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 600; transition: all var(--dur) var(--ease); }
+.config-toggle button:hover { border-color: var(--accent); background: var(--accent-soft); }
+.config-toggle button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); box-shadow: inset 0 0 0 1px var(--accent); }
+.config-section input[type="number"], .config-section select, .config-section textarea { width: 100%; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font-size: 14px; }
+.config-section input[type="number"]:focus, .config-section select:focus, .config-section textarea:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--ring); }
+.config-section textarea { min-height: 96px; resize: vertical; font-family: var(--font); line-height: 1.5; }
+.modal-hint { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: var(--muted); font-size: 12px; }
+.modal-hint span { padding: 2px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface-soft); font-family: ui-monospace, monospace; font-size: 11px; }
+.modal-create { width: calc(100% - 48px); margin: 0 24px 24px; min-height: 48px; }
+
+@media(max-width: 640px) {
+  .quiz-config-modal { width: calc(100vw - 24px); max-height: calc(100vh - 40px); }
+  .modal-header { padding: 20px 20px 16px; }
+  .modal-body { padding: 20px; max-height: calc(100vh - 240px); }
+  .config-toggle { flex-direction: column; }
+  .modal-create { width: calc(100% - 40px); margin: 0 20px 20px; }
+}

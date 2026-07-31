@@ -131,4 +131,5 @@ export type DemoState = {
   feedbackOpenFor: string | null;
   flagged: Record<string, string>;
   errorMessage: string;
+  studyCardExpanded: boolean;
 };
