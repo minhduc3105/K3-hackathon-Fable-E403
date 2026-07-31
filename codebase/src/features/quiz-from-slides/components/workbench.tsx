@@ -2,9 +2,9 @@
 
 import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, BookOpenText, CaretLeft, CaretRight, ChatCircleDots, Check, CheckCircle, CornersOut, DownloadSimple, FilePdf, Minus, Moon, PaperPlaneRight, Plus, Robot, Sparkle, Sun, X } from "@phosphor-icons/react";
+import { ArrowLeft, BookOpenText, CaretLeft, CaretRight, ChatCircleDots, Check, CheckCircle, CircleNotch, CornersOut, DownloadSimple, FilePdf, Minus, Moon, PaperPlaneRight, Plus, Robot, Sparkle, Sun, X } from "@phosphor-icons/react";
 import { getMaterial, initialState, scoreQuiz } from "../model/quiz-machine";
-import type { DemoState, GenerateQuizResult, QuizAttempt, QuizQuestion, QuizScenario, SlideCatalogEntry, TutorMessage } from "../model/types";
+import type { DemoState, GenerateQuizResult, QuizAttempt, QuizDifficulty, QuizQuestion, QuizScenario, SlideCatalogEntry, TutorMessage } from "../model/types";
 
 type Props = { courseId: string; lectureId: string; materialId: string; slideCatalog: SlideCatalogEntry[]; demoScenario?: QuizScenario };
 type Panel = "materials" | "tutor";
@@ -70,6 +70,7 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog,
     const attempt: QuizAttempt = { id: `attempt-${Date.now()}`, sourceFileName: source.fileName, sourcePage: state.currentPage, questionCount: state.generatedQuestions.length, score, total: state.generatedQuestions.length, completedAtLabel: new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(new Date()), questions: state.generatedQuestions, answers: state.answers, flagged: state.flagged };
     setState((current) => ({ ...current, screen: "review", quizAttempts: [attempt, ...current.quizAttempts].slice(0, 5), notice: `Đánh giá tiếp thu: ${learningAssessment(score, attempt.total)}` })); focusMain();
   };
+  const retake = () => { if (!state.generatedQuestions.length) return; patch({ screen: "quiz", currentQuestionIndex: 0, answers: {}, flagged: {}, feedbackOpenFor: null, notice: "Bắt đầu làm lại bộ câu hỏi này." }); focusMain(); };
   const generate = async () => {
     if (controller.current) return;
     if (demoScenario === "insufficient") { patch({ screen: "insufficient", errorMessage: "Học liệu này chưa có đủ nội dung chữ rõ ràng để tạo câu hỏi có căn cứ." }); focusMain(); return; }
@@ -80,9 +81,9 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog,
       ...state.generatedQuestions.map((question) => question.prompt),
     ])).slice(-80);
     const next = new AbortController(); controller.current = next; patch({ screen: "processing", processingStage: 0, generatedQuestions: [], answers: {}, currentQuestionIndex: 0, errorMessage: "" });
-    try { patch({ processingStage: 1 }); const response = await fetch("/api/quiz/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sourceFileName: source.fileName, questionCount: state.quizQuestionCount, learnerInstructions: state.learnerIntent, generationNonce: crypto.randomUUID(), previousQuestionPrompts }), signal: next.signal }); const result = await response.json() as GenerateQuizResult; if (result.status === "ready") saveQuizHistory(source.fileName, [...previousQuestionPrompts, ...result.questions.map((question) => question.prompt)]); patch({ processingStage: 2 });
+    try { const response = await fetch("/api/quiz/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sourceFileName: source.fileName, questionCount: state.quizQuestionCount, quizDifficulty: state.quizDifficulty, learnerInstructions: state.learnerIntent, generationNonce: crypto.randomUUID(), previousQuestionPrompts }), signal: next.signal }); patch({ processingStage: 1 }); const result = await response.json() as GenerateQuizResult; if (result.status === "ready") saveQuizHistory(source.fileName, [...previousQuestionPrompts, ...result.questions.map((question) => question.prompt)]); patch({ processingStage: 2 });
       if (result.status === "ready") { patch({ screen: "quiz", generatedQuestions: result.questions, currentQuestionIndex: 0, notice: result.generationMode === "grounded_fallback" ? `Đã tạo ${result.questions.length} câu hỏi mới bằng chế độ dự phòng có căn cứ.` : `Đã tạo ${result.questions.length} câu hỏi mới từ học liệu đang mở.` }); focusMain(); }
-      else { patch({ screen: result.status === "insufficient_content" || result.status === "out_of_scope" ? "insufficient" : "error", errorMessage: result.reason }); focusMain(); }
+      else { patch({ screen: result.status === "insufficient_content" ? "insufficient" : result.status === "out_of_scope" ? "rejected" : "error", errorMessage: result.reason }); focusMain(); }
     } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) { patch({ screen: "error", errorMessage: error instanceof Error ? error.message : "Không thể tạo câu hỏi lúc này." }); focusMain(); } } finally { controller.current = null; }
   };
   const toggle = (panel: Panel) => { if (compact) { setDrawer((current) => current === panel ? null : panel); return; } patch(panel === "materials" ? { leftPanelCollapsed: !state.leftPanelCollapsed } : { rightPanelCollapsed: !state.rightPanelCollapsed }); };
@@ -96,7 +97,7 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog,
     <div className="workspace">
       <Materials source={source} files={slideCatalog} collapsed={lessonCollapsed} drawerOpen={drawer === "materials"} onToggle={() => toggle("materials")} onSelect={(fileName) => { patch({ selectedSourceFile: fileName, currentPage: 1, screen: "lesson", answers: {} }); setDrawer(null); }} />
       <div className="resize-handle" role="separator" tabIndex={0} aria-label="Đổi độ rộng học liệu" onPointerDown={(event) => resize("materials", event)} onKeyDown={(event) => resizeKeys("materials", event)} />
-      <main id="main-content" className="study-main" tabIndex={-1}>{state.screen === "lesson" ? <Reader state={state} source={source} sourceUrl={sourceUrl} onPatch={patch} /> : <Flow state={state} source={source} onAnswer={(id, value) => patch({ answers: { ...state.answers, [id]: value } })} onMove={(amount) => patch({ currentQuestionIndex: Math.max(0, Math.min(state.generatedQuestions.length - 1, state.currentQuestionIndex + amount)) })} onBack={backToLesson} onGenerate={generate} onComplete={complete} onFlag={(id, reason) => patch({ flagged: { ...state.flagged, [id]: reason }, feedbackOpenFor: null })} />}</main>
+      <main id="main-content" className="study-main" tabIndex={-1}>{state.screen === "lesson" ? <Reader state={state} source={source} sourceUrl={sourceUrl} onPatch={patch} /> : <Flow state={state} source={source} onAnswer={(id, value) => patch({ answers: { ...state.answers, [id]: value } })} onMove={(amount) => patch({ currentQuestionIndex: Math.max(0, Math.min(state.generatedQuestions.length - 1, state.currentQuestionIndex + amount)) })} onBack={backToLesson} onGenerate={generate} onComplete={complete} onRetake={retake} onFlag={(id, reason) => patch({ flagged: { ...state.flagged, [id]: reason }, feedbackOpenFor: null })} onOpenConfig={() => patch({ studyCardExpanded: true })} />}</main>
       <div className="resize-handle" role="separator" tabIndex={0} aria-label="Đổi độ rộng VLearn Tutor" onPointerDown={(event) => resize("tutor", event)} onKeyDown={(event) => resizeKeys("tutor", event)} />
       <Tutor state={state} source={source} collapsed={tutorCollapsed} drawerOpen={drawer === "tutor"} onToggle={() => toggle("tutor")} onGenerate={generate} onPatch={patch} onReview={(attempt) => { patch({ screen: "review", generatedQuestions: attempt.questions, answers: attempt.answers, flagged: attempt.flagged, selectedSourceFile: attempt.sourceFileName }); setDrawer(null); focusMain(); }} />
     </div>
@@ -142,12 +143,192 @@ function Tutor({ state, source, collapsed, drawerOpen, onToggle, onGenerate, onP
   return <aside className={`tutor-panel ${collapsed ? "is-collapsed" : ""} ${drawerOpen ? "is-drawer-open" : ""}`} aria-label="VLearn Tutor"><div className="panel-title">{!collapsed && <><span className="panel-icon panel-icon-tutor"><Robot size={20} /></span><div><h2>VLearn Tutor</h2><p><i /> Sẵn sàng hỗ trợ</p></div></>}<button className="panel-toggle" data-close={drawerOpen ? "tutor" : undefined} type="button" onClick={onToggle} aria-label={drawerOpen ? "Đóng VLearn Tutor" : collapsed ? "Mở VLearn Tutor" : "Thu gọn VLearn Tutor"}>{drawerOpen ? <X size={18} /> : collapsed ? <CaretLeft size={18} /> : <CaretRight size={18} />}</button></div>{!collapsed && <><section className="study-card"><div><Sparkle size={20} /><strong>Tự kiểm tra bài học</strong></div><button className="primary-button study-card-trigger" type="button" onClick={() => onPatch({ studyCardExpanded: true })}>Tạo Quiz</button></section>{state.quizAttempts.length ? <section className="attempts"><h3>Lần ôn gần đây</h3>{state.quizAttempts.map((item) => <button key={item.id} type="button" onClick={() => onReview(item)}><span><strong>{item.score}/{item.total} câu đúng</strong><small>{item.completedAtLabel} · {item.sourceFileName}</small></span><CaretRight size={18} /></button>)}</section> : null}<div className="chat"><div className="chat-log" aria-live="polite">{state.tutorMessages.map((message) => <p className={message.role === "student" ? "from-student" : ""} key={message.id}>{message.text}</p>)}{isTyping && <p className="typing-indicator">Đang suy nghĩ...</p>}</div><div className="chat-input"><input value={state.tutorDraft} onChange={(event) => onPatch({ tutorDraft: event.target.value })} onKeyDown={(event) => event.key === "Enter" && !isTyping && send()} placeholder="Hỏi về slide này..." aria-label="Câu hỏi cho VLearn Tutor" disabled={isTyping} /><button type="button" onClick={send} aria-label="Gửi câu hỏi" disabled={isTyping}><PaperPlaneRight size={18} /></button></div></div></>}</aside>;
 }
 function Reader({ state, source, sourceUrl, onPatch }: { state: DemoState; source: SlideCatalogEntry; sourceUrl: string; onPatch: (value: Partial<DemoState>) => void }) { const url = `${sourceUrl}#page=${state.currentPage}&zoom=${state.zoom}`; return <section className="reader"><div className="reader-toolbar"><div><span>Đang học</span><strong>{source.fileName}</strong></div><div className="toolbar-actions"><button className="icon-button" type="button" onClick={() => onPatch({ zoom: Math.max(70, state.zoom - 10) })} aria-label="Thu nhỏ"><Minus size={18} /></button><strong>{state.zoom}%</strong><button className="icon-button" type="button" onClick={() => onPatch({ zoom: Math.min(150, state.zoom + 10) })} aria-label="Phóng to"><Plus size={18} /></button><button className="icon-button" type="button" onClick={() => onPatch({ zoom: 90 })} aria-label="Vừa trang"><CornersOut size={18} /></button><a className="icon-button" href={sourceUrl} download={source.fileName} aria-label="Tải học liệu"><DownloadSimple size={18} /></a></div></div><div className="pdf-frame"><iframe key={url} src={url} title={`Slide ${state.currentPage} của ${source.fileName}`} /></div><div className="reader-footer"><button type="button" onClick={() => onPatch({ currentPage: Math.max(1, state.currentPage - 1) })} disabled={state.currentPage <= 1}><CaretLeft size={18} />Trang trước</button><span>Trang <strong>{state.currentPage}</strong> / {source.pageCount}</span><button type="button" onClick={() => onPatch({ currentPage: Math.min(source.pageCount, state.currentPage + 1) })} disabled={state.currentPage >= source.pageCount}>Trang sau<CaretRight size={18} /></button></div></section>; }
-function Flow({ state, source, onAnswer, onMove, onBack, onGenerate, onComplete, onFlag }: { state: DemoState; source: SlideCatalogEntry; onAnswer: (id: string, value: string) => void; onMove: (amount: number) => void; onBack: (page?: number) => void; onGenerate: () => void; onComplete: () => void; onFlag: (id: string, reason: string) => void }) { if (state.screen === "processing") return <section className="flow processing"><span className="flow-kicker">Đang chuẩn bị</span><h1>Tạo câu hỏi từ học liệu</h1><p>VLearn đang dùng nội dung trong {source.fileName}{state.learnerIntent.trim() ? ` và áp dụng yêu cầu: “${state.learnerIntent.trim()}”` : ""}.</p><div className="steps">{["Đang đọc slide", "Đang áp dụng yêu cầu", "Đang kiểm tra căn cứ"].map((item, index) => <div className={index <= state.processingStage ? "active" : ""} key={item}><span>{index < state.processingStage ? <Check size={16} /> : index + 1}</span>{item}</div>)}</div><button className="secondary-button" type="button" onClick={() => onBack()}>Hủy</button></section>;
-  if (state.screen === "quiz") { const question = state.generatedQuestions[state.currentQuestionIndex]; if (!question) return null; const selected = state.answers[question.id]; const last = state.currentQuestionIndex === state.generatedQuestions.length - 1; return <Quiz question={question} index={state.currentQuestionIndex} total={state.generatedQuestions.length} selected={selected} onAnswer={onAnswer} onPrevious={() => onMove(-1)} onNext={() => last ? onComplete() : onMove(1)} />; }
-  if (state.screen === "review") return <Review state={state} source={source} onBack={onBack} onFlag={onFlag} />;
-  const insufficient = state.screen === "insufficient"; return <section className="flow empty"><span className="flow-kicker">{insufficient ? "Chưa đủ căn cứ" : "Chưa hoàn tất"}</span><h1>{insufficient ? "Chưa đủ nội dung để tạo câu hỏi" : "Không thể tạo câu hỏi lúc này"}</h1><p>{state.errorMessage}</p><div><button className="secondary-button" type="button" onClick={() => onBack()}>Quay lại học liệu</button>{!insufficient && <button className="primary-button" type="button" onClick={onGenerate}>Thử lại</button>}</div></section>; }
+function Flow({
+  state,
+  source,
+  onAnswer,
+  onMove,
+  onBack,
+  onGenerate,
+  onComplete,
+  onRetake,
+  onFlag,
+  onOpenConfig,
+}: {
+  state: DemoState;
+  source: SlideCatalogEntry;
+  onAnswer: (id: string, value: string) => void;
+  onMove: (amount: number) => void;
+  onBack: (page?: number) => void;
+  onGenerate: () => void;
+  onComplete: () => void;
+  onRetake: () => void;
+  onFlag: (id: string, reason: string) => void;
+  onOpenConfig: () => void;
+}) {
+  if (state.screen === "processing") {
+    const steps = ["Đang đọc slide", "Đang áp dụng yêu cầu", "Đang kiểm tra căn cứ"];
+    return (
+      <section className="flow processing" aria-live="polite" aria-busy="true">
+        <span className="flow-kicker">Đang chuẩn bị</span>
+        <h1>Tạo câu hỏi từ học liệu</h1>
+        <p>
+          VLearn đang dùng nội dung trong {source.fileName}
+          {state.learnerIntent.trim() ? ` và áp dụng yêu cầu: “${state.learnerIntent.trim()}”` : ""}.
+        </p>
+        <div className="steps">
+          {steps.map((item, index) => {
+            const active = index === state.processingStage;
+            const done = index < state.processingStage;
+            return (
+              <div className={active ? "active" : done ? "done" : ""} key={item}>
+                <span aria-hidden="true">
+                  {done ? (
+                    <Check size={16} />
+                  ) : active ? (
+                    <CircleNotch className="processing-spinner" size={16} />
+                  ) : (
+                    index + 1
+                  )}
+                </span>
+                <strong>{item}</strong>
+                {active && <small>Đang xử lý</small>}
+              </div>
+            );
+          })}
+        </div>
+        <button className="secondary-button" type="button" onClick={() => onBack()}>
+          Hủy
+        </button>
+      </section>
+    );
+  }
+
+  if (state.screen === "quiz") {
+    const question = state.generatedQuestions[state.currentQuestionIndex];
+    if (!question) return null;
+    const selected = state.answers[question.id];
+    const last = state.currentQuestionIndex === state.generatedQuestions.length - 1;
+    return (
+      <Quiz
+        question={question}
+        index={state.currentQuestionIndex}
+        total={state.generatedQuestions.length}
+        selected={selected}
+        onAnswer={onAnswer}
+        onPrevious={() => onMove(-1)}
+        onNext={() => (last ? onComplete() : onMove(1))}
+      />
+    );
+  }
+
+  if (state.screen === "review") return <ReviewWithRetake state={state} source={source} onBack={onBack} onRetake={onRetake} onFlag={onFlag} />;
+
+  if (state.screen === "rejected") {
+    return (
+      <section className="flow empty rejected">
+        <span className="flow-kicker">Yêu cầu không hợp lệ</span>
+        <h1>Prompt cần bám vào học liệu</h1>
+        <p>{state.errorMessage}</p>
+        <div>
+          <button className="secondary-button" type="button" onClick={() => onBack()}>
+            Quay lại học liệu
+          </button>
+          <button className="primary-button" type="button" onClick={onOpenConfig}>
+            Chỉnh yêu cầu
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  const insufficient = state.screen === "insufficient";
+  return (
+    <section className="flow empty">
+      <span className="flow-kicker">{insufficient ? "Chưa đủ căn cứ" : "Chưa hoàn tất"}</span>
+      <h1>{insufficient ? "Chưa đủ nội dung để tạo câu hỏi" : "Không thể tạo câu hỏi lúc này"}</h1>
+      <p>{state.errorMessage}</p>
+      <div>
+        <button className="secondary-button" type="button" onClick={() => onBack()}>
+          Quay lại học liệu
+        </button>
+        {!insufficient && (
+          <button className="primary-button" type="button" onClick={onGenerate}>
+            Thử lại
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
 function Quiz({ question, index, total, selected, onAnswer, onPrevious, onNext }: { question: QuizQuestion; index: number; total: number; selected?: string; onAnswer: (id: string, value: string) => void; onPrevious: () => void; onNext: () => void }) { return <section className="flow quiz-flow"><div className="quiz-progress"><span>Tự kiểm tra</span><strong>Câu {index + 1} / {total}</strong></div><span className="flow-kicker">Nhớ lại ý chính</span><h1>{question.prompt}</h1><fieldset><legend className="sr-only">Chọn một đáp án</legend>{question.choices.map((choice, index) => <label className={selected === choice.id ? "selected" : ""} key={choice.id}><input type="radio" name="answer" checked={selected === choice.id} onChange={() => onAnswer(question.id, choice.id)} /><span>{String.fromCharCode(65 + index)}</span>{choice.label}</label>)}</fieldset><div className="flow-actions">{index ? <button className="text-button" type="button" onClick={onPrevious}>Câu trước</button> : <span /> }<button className="primary-button" type="button" disabled={!selected} onClick={onNext}>{index === total - 1 ? "Nộp bài" : "Tiếp tục"}</button></div></section>; }
-function Review({ state, source, onBack, onFlag }: { state: DemoState; source: SlideCatalogEntry; onBack: (page?: number) => void; onFlag: (id: string, reason: string) => void }) {
+function ReviewWithRetake({ state, source, onBack, onRetake, onFlag }: { state: DemoState; source: SlideCatalogEntry; onBack: (page?: number) => void; onRetake: () => void; onFlag: (id: string, reason: string) => void }) {
+  const score = scoreQuiz(state.generatedQuestions, state.answers);
+  const priorities = reviewPriorities(state.generatedQuestions, state.answers);
+
+  return (
+    <section className="flow review">
+      <header>
+        <div>
+          <span className="flow-kicker">Kết quả tự kiểm tra</span>
+          <h1>Bạn nhớ đúng {score}/{state.generatedQuestions.length} câu</h1>
+          <p>Đây là kiểm tra nhanh, không phải đánh giá mức độ thành thạo.</p>
+        </div>
+        <strong>{score}/{state.generatedQuestions.length}</strong>
+      </header>
+      <aside className="review-assessment">
+        <strong>Đánh giá tiếp thu</strong>
+        <p>{learningAssessment(score, state.generatedQuestions.length)}</p>
+        {priorities.length ? (
+          <>
+            <h3>Nên ôn lại</h3>
+            <ul>
+              {priorities.map((item) => (
+                <li key={`${item.slide}-${item.excerpt}`}>
+                  <b>Slide {item.slide}:</b> {item.excerpt}
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className="assessment-complete">Bạn đã trả lời đúng toàn bộ câu hỏi trong lần này.</p>
+        )}
+      </aside>
+      {state.generatedQuestions.map((question, index) => {
+        const correct = question.choices.find((item) => item.id === question.correctChoiceId);
+        const selected = question.choices.find((item) => item.id === state.answers[question.id]);
+        const okay = selected?.id === correct?.id;
+
+        return (
+          <article className={okay ? "correct" : "incorrect"} key={question.id}>
+            <span>{okay ? <CheckCircle size={20} /> : <X size={20} />} Câu {index + 1}</span>
+            <h2>{question.prompt}</h2>
+            <p><b>Bạn chọn:</b> {selected?.label ?? "Bỏ qua"}</p>
+            <p><b>Đáp án:</b> {correct?.label}</p>
+            <div>{question.explanation}</div>
+            <button className="text-button" type="button" onClick={() => onBack(question.source.pageOrSlide)}>
+              Xem nguồn: slide {question.source.pageOrSlide}
+            </button>
+            {!state.flagged[question.id] && (
+              <button className="text-button" type="button" onClick={() => onFlag(question.id, "Câu hỏi chưa rõ")}>
+                Báo câu hỏi chưa rõ
+              </button>
+            )}
+          </article>
+        );
+      })}
+      <div className="review-actions">
+        <button className="secondary-button" type="button" onClick={onRetake}>
+          Làm lại bài
+        </button>
+        <button className="primary-button" type="button" onClick={() => onBack()}>
+          Quay lại học liệu
+        </button>
+      </div>
+    </section>
+  );
+}
+function Review({ state, source, onBack, onRetake, onFlag }: { state: DemoState; source: SlideCatalogEntry; onBack: (page?: number) => void; onRetake: () => void; onFlag: (id: string, reason: string) => void }) {
   const score = scoreQuiz(state.generatedQuestions, state.answers);
   const priorities = reviewPriorities(state.generatedQuestions, state.answers);
   return <section className="flow review"><header><div><span className="flow-kicker">Kết quả tự kiểm tra</span><h1>Bạn nhớ đúng {score}/{state.generatedQuestions.length} câu</h1><p>Đây là kiểm tra nhanh, không phải đánh giá mức độ thành thạo.</p></div><strong>{score}/{state.generatedQuestions.length}</strong></header><aside className="review-assessment"><strong>Đánh giá tiếp thu</strong><p>{learningAssessment(score, state.generatedQuestions.length)}</p>{priorities.length ? <><h3>Nên ôn lại</h3><ul>{priorities.map((item) => <li key={`${item.slide}-${item.excerpt}`}><b>Slide {item.slide}:</b> {item.excerpt}</li>)}</ul></> : <p className="assessment-complete">Bạn đã trả lời đúng toàn bộ câu hỏi trong lần này.</p>}</aside>{state.generatedQuestions.map((question, index) => { const correct = question.choices.find((item) => item.id === question.correctChoiceId); const selected = question.choices.find((item) => item.id === state.answers[question.id]); const okay = selected?.id === correct?.id; return <article className={okay ? "correct" : "incorrect"} key={question.id}><span>{okay ? <CheckCircle size={20} /> : <X size={20} />} Câu {index + 1}</span><h2>{question.prompt}</h2><p><b>Bạn chọn:</b> {selected?.label ?? "Bỏ qua"}</p><p><b>Đáp án:</b> {correct?.label}</p><div>{question.explanation}</div><button className="text-button" type="button" onClick={() => onBack(question.source.pageOrSlide)}>Xem nguồn: slide {question.source.pageOrSlide}</button>{!state.flagged[question.id] && <button className="text-button" type="button" onClick={() => onFlag(question.id, "Câu hỏi chưa rõ")}>Báo câu hỏi chưa rõ</button>}</article>; })}<button className="primary-button" type="button" onClick={() => onBack()}>Quay lại học liệu</button></section>;
@@ -156,6 +337,57 @@ function QuizConfigModal({ state, onClose, onCreate, onPatch }: { state: DemoSta
   type QuizQuantity = "few" | "standard" | "custom";
   const [quantity, setQuantity] = useState<QuizQuantity>("standard");
   const quantityMap: Record<QuizQuantity, number> = { few: 3, standard: 5, custom: state.quizQuestionCount };
+  const difficulties: Array<{ value: QuizDifficulty; label: string; hint: string }> = [
+    { value: "easy", label: "Dễ", hint: "Nhận biết trực tiếp từ slide." },
+    { value: "medium", label: "Trung Bình", hint: "Hiểu ý chính và phân biệt nhẹ." },
+    { value: "hard", label: "Khó", hint: "Vận dụng hoặc so sánh, vẫn bám nguồn." },
+  ];
   const applyQuantity = (q: QuizQuantity) => { setQuantity(q); if (q !== "custom") onPatch({ quizQuestionCount: quantityMap[q] }); };
-  return <><div className="modal-backdrop" onClick={onClose} /><div className="quiz-config-modal" role="dialog" aria-labelledby="modal-title"><button className="modal-close" type="button" onClick={onClose} aria-label="Đóng"><X size={20} /></button><div className="modal-header"><Sparkle size={24} /><h2 id="modal-title">Tạo quiz mới</h2></div><div className="modal-body"><section className="config-section"><h3>Số câu hỏi</h3><div className="config-toggle"><button className={quantity === "few" ? "active" : ""} type="button" onClick={() => applyQuantity("few")}>Ít hơn</button><button className={quantity === "standard" ? "active" : ""} type="button" onClick={() => applyQuantity("standard")}>Tiêu chuẩn (Mặc định)</button><button className={quantity === "custom" ? "active" : ""} type="button" onClick={() => applyQuantity("custom")}>Tùy chọn khác</button></div>{quantity === "custom" && <input type="number" min="1" max="20" value={state.quizQuestionCount} onChange={(e) => onPatch({ quizQuestionCount: Math.max(1, Math.min(20, Number(e.target.value) || 1)) })} />}</section><section className="config-section"><h3>Nguồn</h3><select value="current" disabled><option value="current">Học liệu đang mở</option></select></section><section className="config-section"><h3>Yêu cầu riêng cho quiz</h3><textarea value={state.learnerIntent} maxLength={1000} onChange={(e) => onPatch({ learnerIntent: e.target.value })} placeholder="Ví dụ: Tập trung vào công thức JTBD, hỏi ở mức vận dụng và ưu tiên ví dụ có trong slide." rows={4} aria-describedby="quiz-instructions-help" /><p className="modal-hint" id="quiz-instructions-help">Yêu cầu này sẽ được ghép với nội dung học liệu; đáp án vẫn chỉ lấy từ nguồn đang mở.</p></section></div><button className="primary-button modal-create" type="button" onClick={onCreate} disabled={state.screen === "processing"}>Tạo quiz mới</button></div></>;
+
+  return (
+    <>
+      <div className="modal-backdrop" onClick={onClose} />
+      <div className="quiz-config-modal" role="dialog" aria-labelledby="modal-title">
+        <button className="modal-close" type="button" onClick={onClose} aria-label="Đóng"><X size={20} /></button>
+        <div className="modal-header"><Sparkle size={24} /><h2 id="modal-title">Tạo quiz mới</h2></div>
+        <div className="modal-body">
+          <section className="config-section">
+            <h3>Số câu hỏi</h3>
+            <div className="config-toggle">
+              <button className={quantity === "few" ? "active" : ""} type="button" onClick={() => applyQuantity("few")}>Ít hơn</button>
+              <button className={quantity === "standard" ? "active" : ""} type="button" onClick={() => applyQuantity("standard")}>Tiêu chuẩn</button>
+              <button className={quantity === "custom" ? "active" : ""} type="button" onClick={() => applyQuantity("custom")}>Tùy chọn</button>
+            </div>
+            {quantity === "custom" && <input type="number" min="1" max="20" value={state.quizQuestionCount} onChange={(e) => onPatch({ quizQuestionCount: Math.max(1, Math.min(20, Number(e.target.value) || 1)) })} />}
+          </section>
+          <section className="config-section">
+            <h3>Độ khó</h3>
+            <div className="config-toggle difficulty-toggle">
+              {difficulties.map((item) => (
+                <button
+                  className={state.quizDifficulty === item.value ? "active" : ""}
+                  type="button"
+                  key={item.value}
+                  onClick={() => onPatch({ quizDifficulty: item.value })}
+                >
+                  <span>{item.label}</span>
+                  <small>{item.hint}</small>
+                </button>
+              ))}
+            </div>
+          </section>
+          <section className="config-section">
+            <h3>Nguồn</h3>
+            <select value="current" disabled><option value="current">Học liệu đang mở</option></select>
+          </section>
+          <section className="config-section">
+            <h3>Yêu cầu riêng cho quiz</h3>
+            <textarea value={state.learnerIntent} maxLength={1000} onChange={(e) => onPatch({ learnerIntent: e.target.value })} placeholder="Ví dụ: Tập trung vào công thức JTBD, hỏi ở mức vận dụng và ưu tiên ví dụ có trong slide." rows={4} aria-describedby="quiz-instructions-help" />
+            <p className="modal-hint" id="quiz-instructions-help">Yêu cầu phải bám vào học liệu hoặc cách hỏi học tập; prompt lạc đề sẽ được từ chối.</p>
+          </section>
+        </div>
+        <button className="primary-button modal-create" type="button" onClick={onCreate} disabled={state.screen === "processing"}>Tạo quiz mới</button>
+      </div>
+    </>
+  );
 }

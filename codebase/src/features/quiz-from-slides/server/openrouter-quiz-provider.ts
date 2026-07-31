@@ -1,10 +1,12 @@
-import type { GenerateQuizResult, QuizChoice, QuizQuestion } from "../model/types";
+import type { GenerateQuizResult, QuizChoice, QuizDifficulty, QuizQuestion } from "../model/types";
+import { validateQuizPrompt } from "./prompt-guardrails";
 import { generateGroundedFallbackQuiz } from "./grounded-quiz-fallback";
 
 type GenerateGroundedQuizInput = {
   sourceTitle: string;
   sourceText: string;
   learnerInstructions?: string;
+  difficulty: QuizDifficulty;
   questionCount: number;
   traceId: string;
   generationNonce: string;
@@ -151,12 +153,29 @@ export async function generateGroundedQuiz(input: GenerateGroundedQuizInput): Pr
   const fallback = () => generateGroundedFallbackQuiz({
     sourceText: input.sourceText,
     learnerInstructions: input.learnerInstructions,
+    difficulty: input.difficulty,
     questionCount: input.questionCount,
     traceId: input.traceId,
     generationNonce: input.generationNonce,
     previousQuestionPrompts: input.previousQuestionPrompts,
     model,
   });
+
+  const promptCheck = validateQuizPrompt({
+    learnerInstructions: input.learnerInstructions ?? "",
+    sourceTitle: input.sourceTitle,
+    sourceText: input.sourceText,
+    difficulty: input.difficulty,
+  });
+
+  if (promptCheck.status === "out_of_scope") {
+    return {
+      status: "out_of_scope",
+      traceId: input.traceId,
+      model,
+      reason: promptCheck.reason,
+    };
+  }
 
   if (!apiKey) return fallback();
 
@@ -182,6 +201,9 @@ ${input.sourceTitle}
 
 LEARNER QUIZ REQUIREMENTS:
 ${input.learnerInstructions?.trim() || "Bao quát các ý chính trong nguồn."}
+
+QUIZ DIFFICULTY:
+${input.difficulty}
 
 GENERATION NONCE:
 ${input.generationNonce}
@@ -244,6 +266,16 @@ ${input.sourceText}
       }
 
       const parsed = JSON.parse(text) as Record<string, unknown>;
+      if (parsed.status === "out_of_scope") {
+        return {
+          status: "out_of_scope",
+          traceId: input.traceId,
+          model,
+          reason: typeof parsed.reason === "string" && parsed.reason.trim()
+            ? parsed.reason.trim()
+            : "Yêu cầu riêng không bám vào học liệu.",
+        };
+      }
       if (parsed.status !== "ready") {
         retryFeedback = "Nguồn đã được route xác nhận là có thể đọc. Hãy tạo MCQ có căn cứ và áp dụng yêu cầu người học.";
         continue;

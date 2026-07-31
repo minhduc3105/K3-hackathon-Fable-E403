@@ -2,11 +2,13 @@ export type ThemeMode = "light" | "dark";
 
 export type LanguageMode = "vi" | "en";
 
-export type Screen = "lesson" | "processing" | "quiz" | "review" | "insufficient" | "error";
+export type Screen = "lesson" | "processing" | "quiz" | "review" | "insufficient" | "rejected" | "error";
 
 export type ReaderMode = "read" | "pen";
 
 export type ProcessingStage = 0 | 1 | 2;
+
+export type QuizDifficulty = "easy" | "medium" | "hard";
 
 export type TutorRole = "tutor" | "student";
 
@@ -124,6 +126,7 @@ export type DemoState = {
   scenario: QuizScenario;
   processingStage: ProcessingStage;
   quizQuestionCount: number;
+  quizDifficulty: QuizDifficulty;
   learnerIntent: string;
   generatedQuestions: QuizQuestion[];
   quizAttempts: QuizAttempt[];

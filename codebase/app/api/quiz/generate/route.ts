@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateGroundedQuiz } from "@/features/quiz-from-slides/server/openrouter-quiz-provider";
 import { getControlledSourceContext } from "@/features/quiz-from-slides/server/source-context";
+import type { QuizDifficulty } from "@/features/quiz-from-slides/model/types";
 
 const MAX_CONTEXT_LENGTH = 12_000;
 const MIN_QUESTION_COUNT = 1;
@@ -38,6 +39,10 @@ function readPreviousQuestionPrompts(value: unknown): string[] {
     .slice(-MAX_PREVIOUS_QUESTIONS);
 }
 
+function readQuizDifficulty(value: unknown): QuizDifficulty {
+  return value === "easy" || value === "medium" || value === "hard" ? value : "medium";
+}
+
 export async function POST(request: Request) {
   const traceId = crypto.randomUUID();
 
@@ -53,6 +58,7 @@ export async function POST(request: Request) {
     const generationNonce = typeof body.generationNonce === "string" && body.generationNonce.length <= 120
       ? body.generationNonce
       : crypto.randomUUID();
+    const difficulty = readQuizDifficulty(body.quizDifficulty);
     const previousQuestionPrompts = readPreviousQuestionPrompts(body.previousQuestionPrompts);
     const questionCount = body.questionCount === undefined
       ? 4
@@ -101,13 +107,14 @@ export async function POST(request: Request) {
       sourceTitle,
       sourceText,
       learnerInstructions,
+      difficulty,
       questionCount,
       traceId,
       generationNonce,
       previousQuestionPrompts,
     });
 
-    const status = result.status === "generation_failed" ? 502 : 200;
+    const status = result.status === "generation_failed" ? 502 : result.status === "out_of_scope" ? 422 : 200;
     return NextResponse.json(result, { status });
   } catch (error) {
     console.error("Quiz generation error:", error);

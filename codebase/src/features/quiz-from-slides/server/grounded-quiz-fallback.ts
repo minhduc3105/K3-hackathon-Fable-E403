@@ -3,6 +3,7 @@ import type { GenerateQuizResult, QuizChoice, QuizQuestion } from "../model/type
 type GroundedFallbackInput = {
   sourceText: string;
   learnerInstructions?: string;
+  difficulty: "easy" | "medium" | "hard";
   questionCount: number;
   traceId: string;
   generationNonce: string;
@@ -162,13 +163,18 @@ function focusLabel(learnerInstructions: string, unit: SourceUnit) {
 function buildPrompt(
   unit: SourceUnit,
   learnerInstructions: string,
+  difficulty: "easy" | "medium" | "hard",
   seed: number,
   blockedPrompts: string[],
 ) {
   const focus = focusLabel(learnerInstructions, unit);
   const normalizedInstructions = normalize(learnerInstructions);
   const applicationMode = /(vận dụng|phân tích|tình huống|khó|application)/i.test(normalizedInstructions);
-  const templates = applicationMode ? applicationPromptTemplates : promptTemplates;
+  const templates = difficulty === "easy"
+    ? promptTemplates.slice(0, 10)
+    : difficulty === "hard"
+      ? (applicationMode ? applicationPromptTemplates : [...applicationPromptTemplates, ...promptTemplates])
+      : (applicationMode ? [...applicationPromptTemplates, ...promptTemplates] : promptTemplates);
 
   for (let offset = 0; offset < templates.length; offset += 1) {
     const template = templates[(seed + offset) % templates.length];
@@ -209,6 +215,7 @@ function buildQuestion(
   unit: SourceUnit,
   units: SourceUnit[],
   learnerInstructions: string,
+  difficulty: "easy" | "medium" | "hard",
   questionIndex: number,
   seed: number,
   blockedPrompts: string[],
@@ -219,7 +226,7 @@ function buildQuestion(
   const labels = [unit.excerpt, ...otherExcerpts, ...fallbackDistractors(unit.excerpt)].slice(0, 4);
   const shuffled = seededShuffle(labels, seed + questionIndex * 101);
   const correctIndex = shuffled.indexOf(unit.excerpt);
-  const prompt = buildPrompt(unit, learnerInstructions, seed + questionIndex, blockedPrompts);
+  const prompt = buildPrompt(unit, learnerInstructions, difficulty, seed + questionIndex, blockedPrompts);
 
   blockedPrompts.push(prompt);
 
@@ -246,13 +253,14 @@ export function generateGroundedFallbackQuiz(
   const safeUnits = units.length
     ? units
     : [{ pageOrSlide: 1, excerpt: input.sourceText.replace(/\s+/g, " ").trim() }];
-  const seed = hash(`${input.generationNonce}:${input.learnerInstructions ?? ""}`);
+  const seed = hash(`${input.generationNonce}:${input.learnerInstructions ?? ""}:${input.difficulty}`);
   const rankedUnits = rankUnits(safeUnits, input.learnerInstructions ?? "", seed);
   const blockedPrompts = [...input.previousQuestionPrompts];
   const questions = Array.from({ length: input.questionCount }, (_, index) => buildQuestion(
     rankedUnits[index % rankedUnits.length],
     rankedUnits,
     input.learnerInstructions ?? "",
+    input.difficulty,
     index,
     seed,
     blockedPrompts,

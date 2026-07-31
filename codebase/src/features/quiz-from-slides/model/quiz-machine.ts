@@ -32,6 +32,7 @@ export const initialState: DemoState = {
   scenario: "normal",
   processingStage: 0,
   quizQuestionCount: 4,
+  quizDifficulty: "medium",
   learnerIntent: "",
   generatedQuestions: [],
   quizAttempts: [],

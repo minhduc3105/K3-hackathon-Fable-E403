@@ -112,8 +112,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 /* ---- Onboarding flow / steps ---- */
 .flow { border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
 .flow-kicker { color: var(--accent-strong); font-weight: 700; letter-spacing: 0.08em; }
+.steps strong { font-size: 14px; font-weight: 700; }
+.steps small { margin-left: auto; color: var(--accent-strong); font-size: 11px; font-weight: 700; text-transform: uppercase; }
 .steps span { border-radius: var(--radius-full); }
+.steps .done { color: var(--ink); }
+.steps .done span { background: var(--surface-soft); border-color: var(--accent); color: var(--accent-strong); }
 .steps .active span { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.processing-spinner { animation: processing-spin 0.9s linear infinite; }
+@keyframes processing-spin { to { transform: rotate(360deg); } }
 
 /* ---- Quiz flow ---- */
 .quiz-progress strong { color: var(--accent-strong); }
@@ -132,6 +138,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .review-assessment ul { display: grid; gap: 8px; margin: 0; padding-left: 20px; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .review-assessment li b { color: var(--ink); font-weight: 600; }
 .review-assessment .assessment-complete { margin-top: 8px; color: var(--success); font-weight: 600; }
+.review-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
+.review-actions .secondary-button, .review-actions .primary-button { min-width: 132px; }
 .review article.correct>span { color: var(--success); }
 .review article.incorrect>span { color: var(--danger); }
 .review article div { border-left: 3px solid var(--accent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: var(--surface-soft); }
@@ -166,6 +174,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .config-toggle button { flex: 1; min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 600; transition: all var(--dur) var(--ease); }
 .config-toggle button:hover { border-color: var(--accent); background: var(--accent-soft); }
 .config-toggle button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); box-shadow: inset 0 0 0 1px var(--accent); }
+.difficulty-toggle button { display: grid; min-height: 68px; align-content: center; gap: 3px; }
+.difficulty-toggle button span { font-weight: 800; }
+.difficulty-toggle button small { color: var(--muted); font-size: 11px; font-weight: 500; line-height: 1.25; }
+.difficulty-toggle button.active small { color: var(--accent-strong); }
 .config-section input[type="number"], .config-section select, .config-section textarea { width: 100%; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font-size: 14px; }
 .config-section input[type="number"]:focus, .config-section select:focus, .config-section textarea:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--ring); }
 .config-section textarea { min-height: 96px; resize: vertical; font-family: var(--font); line-height: 1.5; }
@@ -178,5 +190,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .modal-header { padding: 20px 20px 16px; }
   .modal-body { padding: 20px; max-height: calc(100vh - 240px); }
   .config-toggle { flex-direction: column; }
+  .review-actions { flex-direction: column; }
+  .review-actions .secondary-button, .review-actions .primary-button { width: 100%; }
   .modal-create { width: calc(100% - 40px); margin: 0 20px 20px; }
 }

@@ -66,14 +66,15 @@ Hai file trong `data/vlearn-pack/slides` do ban tổ chức cấp được đọ
 
 ### Cách tạo quiz hiện tại
 
-1. UI gửi tên học liệu, số câu, `learnerInstructions`, nonce mới và tối đa 80 prompt đã dùng.
+1. UI gửi tên học liệu, số câu, `quizDifficulty`, `learnerInstructions`, nonce mới và tối đa 80 prompt đã dùng.
 2. Route lấy text có nhãn slide từ nguồn đang mở. Yêu cầu riêng của người học và source được đặt ở hai khối tách biệt để source không thể ghi đè nhiệm vụ.
-3. OpenRouter nhận system prompt bắt buộc áp dụng yêu cầu về chủ đề/độ khó/cách hỏi khi có căn cứ trong source. Mô tả kiểu flashcard được chuyển thành câu hỏi MCQ và đáp án.
-4. Response phải có đúng số câu, đúng bốn lựa chọn, một đáp án đúng, excerpt nguyên văn và số slide hợp lệ. Output sai hoặc lặp được retry tối đa ba lần.
-5. Nếu thiếu API key, provider lỗi, JSON sai, grounding fail, model từ chối hoặc tiếp tục lặp, server dùng `grounded-quiz-fallback.ts` để tạo một bộ MCQ mới trực tiếp từ các excerpt. Chế độ này vẫn giữ bốn lựa chọn, nguồn slide và ưu tiên nội dung khớp yêu cầu riêng.
-6. Prompt của quiz mới được lưu trong `sessionStorage` theo từng học liệu để lần tạo tiếp theo tránh dùng lại.
+3. Provider chạy guardrail cho `learnerInstructions`: prompt generic như “tạo câu hỏi” vẫn hợp lệ, nhưng prompt lạc đề/không bám học liệu như “tạo câu hỏi cho con chó” trả `out_of_scope` và không tạo quiz.
+4. OpenRouter nhận system prompt bắt buộc áp dụng yêu cầu về chủ đề, độ khó và cách hỏi khi có căn cứ trong source. `easy` hỏi trực tiếp, `medium` cân bằng hiểu ý chính, `hard` thiên về vận dụng/so sánh nhưng vẫn chỉ dùng source.
+5. Response phải có đúng số câu, đúng bốn lựa chọn, một đáp án đúng, excerpt nguyên văn và số slide hợp lệ. Output sai hoặc lặp được retry tối đa ba lần.
+6. Nếu thiếu API key, provider lỗi, JSON sai, grounding fail hoặc tiếp tục lặp, server dùng `grounded-quiz-fallback.ts` để tạo một bộ MCQ mới trực tiếp từ các excerpt. Chế độ này vẫn giữ bốn lựa chọn, nguồn slide, độ khó đã chọn và ưu tiên nội dung khớp yêu cầu riêng.
+7. Prompt của quiz mới được lưu trong `sessionStorage` theo từng học liệu để lần tạo tiếp theo tránh dùng lại.
 
-Với học liệu đã trích xuất được text, API luôn trả một quiz `ready`; lỗi provider không còn đẩy người học sang màn hình lỗi. Nếu file không có bất kỳ text nào, route vẫn trả `insufficient_content` vì không có căn cứ an toàn để tạo đáp án.
+Với học liệu đã trích xuất được text và prompt hợp lệ, API luôn trả một quiz `ready`; lỗi provider không còn đẩy người học sang màn hình lỗi. Nếu file không có bất kỳ text nào, route vẫn trả `insufficient_content`; nếu prompt riêng lạc đề, route trả `out_of_scope` để UI hiển thị nhánh từ chối.
 
 Sao chép `.env.example` thành `.env.local` và điền `OPENROUTER_API_KEY`. Không commit file `.env.local`.
 
