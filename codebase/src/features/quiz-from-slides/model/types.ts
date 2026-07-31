@@ -132,6 +132,7 @@ export type DemoState = {
   quizAttempts: QuizAttempt[];
   currentQuestionIndex: number;
   answers: Record<string, string>;
+  submittedQuestions: Record<string, boolean>;
   feedbackOpenFor: string | null;
   flagged: Record<string, string>;
   errorMessage: string;

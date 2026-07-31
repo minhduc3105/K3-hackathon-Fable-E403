@@ -38,6 +38,7 @@ export const initialState: DemoState = {
   quizAttempts: [],
   currentQuestionIndex: 0,
   answers: {},
+  submittedQuestions: {},
   feedbackOpenFor: null,
   flagged: {},
   errorMessage: "",

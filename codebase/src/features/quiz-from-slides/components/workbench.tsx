@@ -11,7 +11,7 @@ type Panel = "materials" | "tutor";
 const MIN_LEFT = 224, MIN_RIGHT = 280, MAX_PANEL = 400, MIN_MAIN = 440, GUTTER = 16;
 const clamp = (value: number, min: number, max = MAX_PANEL) => Math.min(max, Math.max(min, value));
 const bytes = (value: number) => value < 1024 ? `${value} B` : value < 1048576 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1048576).toFixed(1)} MB`;
-const quizHistoryKey = (sourceFileName: string) => `vlearn:quiz-prompts:${sourceFileName}`;
+const quizHistoryKey = (sourceFileName: string) => `vlearn:quiz-history:v2:${sourceFileName}`;
 const readQuizHistory = (sourceFileName: string) => {
   try {
     const stored = JSON.parse(window.sessionStorage.getItem(quizHistoryKey(sourceFileName)) ?? "[]") as unknown;
@@ -29,6 +29,8 @@ const saveQuizHistory = (sourceFileName: string, prompts: string[]) => {
     // Storage being unavailable must not prevent a learner from taking a quiz.
   }
 };
+const quizHistoryEntry = (question: QuizQuestion) =>
+  `${question.prompt}\nNguồn đã dùng: ${question.source.excerpt}`;
 const learningAssessment = (score: number, total: number) => {
   const ratio = total ? score / total : 0;
   if (ratio >= 0.85) return "Nắm vững: bạn nhớ tốt các ý chính. Hãy thử áp dụng vào một tình huống mới.";
@@ -70,18 +72,18 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog,
     const attempt: QuizAttempt = { id: `attempt-${Date.now()}`, sourceFileName: source.fileName, sourcePage: state.currentPage, questionCount: state.generatedQuestions.length, score, total: state.generatedQuestions.length, completedAtLabel: new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(new Date()), questions: state.generatedQuestions, answers: state.answers, flagged: state.flagged };
     setState((current) => ({ ...current, screen: "review", quizAttempts: [attempt, ...current.quizAttempts].slice(0, 5), notice: `Đánh giá tiếp thu: ${learningAssessment(score, attempt.total)}` })); focusMain();
   };
-  const retake = () => { if (!state.generatedQuestions.length) return; patch({ screen: "quiz", currentQuestionIndex: 0, answers: {}, flagged: {}, feedbackOpenFor: null, notice: "Bắt đầu làm lại bộ câu hỏi này." }); focusMain(); };
+  const retake = () => { if (!state.generatedQuestions.length) return; patch({ screen: "quiz", currentQuestionIndex: 0, answers: {}, submittedQuestions: {}, flagged: {}, feedbackOpenFor: null, notice: "Bắt đầu làm lại bộ câu hỏi này." }); focusMain(); };
   const generate = async () => {
     if (controller.current) return;
     if (demoScenario === "insufficient") { patch({ screen: "insufficient", errorMessage: "Học liệu này chưa có đủ nội dung chữ rõ ràng để tạo câu hỏi có căn cứ." }); focusMain(); return; }
     if (demoScenario === "failure") { patch({ screen: "error", errorMessage: "Không thể trích xuất nội dung từ học liệu trong lần này." }); focusMain(); return; }
     const previousQuestionPrompts = Array.from(new Set([
       ...readQuizHistory(source.fileName),
-      ...state.quizAttempts.filter((attempt) => attempt.sourceFileName === source.fileName).flatMap((attempt) => attempt.questions.map((question) => question.prompt)),
-      ...state.generatedQuestions.map((question) => question.prompt),
+      ...state.quizAttempts.filter((attempt) => attempt.sourceFileName === source.fileName).flatMap((attempt) => attempt.questions.map(quizHistoryEntry)),
+      ...state.generatedQuestions.map(quizHistoryEntry),
     ])).slice(-80);
-    const next = new AbortController(); controller.current = next; patch({ screen: "processing", processingStage: 0, generatedQuestions: [], answers: {}, currentQuestionIndex: 0, errorMessage: "" });
-    try { const response = await fetch("/api/quiz/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sourceFileName: source.fileName, questionCount: state.quizQuestionCount, quizDifficulty: state.quizDifficulty, learnerInstructions: state.learnerIntent, generationNonce: crypto.randomUUID(), previousQuestionPrompts }), signal: next.signal }); patch({ processingStage: 1 }); const result = await response.json() as GenerateQuizResult; if (result.status === "ready") saveQuizHistory(source.fileName, [...previousQuestionPrompts, ...result.questions.map((question) => question.prompt)]); patch({ processingStage: 2 });
+    const next = new AbortController(); controller.current = next; patch({ screen: "processing", processingStage: 0, generatedQuestions: [], answers: {}, submittedQuestions: {}, currentQuestionIndex: 0, errorMessage: "" });
+    try { const response = await fetch("/api/quiz/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sourceFileName: source.fileName, questionCount: state.quizQuestionCount, quizDifficulty: state.quizDifficulty, learnerInstructions: state.learnerIntent, generationNonce: crypto.randomUUID(), previousQuestionPrompts }), signal: next.signal }); patch({ processingStage: 1 }); const result = await response.json() as GenerateQuizResult; if (result.status === "ready") saveQuizHistory(source.fileName, [...previousQuestionPrompts, ...result.questions.map(quizHistoryEntry)]); patch({ processingStage: 2 });
       if (result.status === "ready") { patch({ screen: "quiz", generatedQuestions: result.questions, currentQuestionIndex: 0, notice: result.generationMode === "grounded_fallback" ? `Đã tạo ${result.questions.length} câu hỏi mới bằng chế độ dự phòng có căn cứ.` : `Đã tạo ${result.questions.length} câu hỏi mới từ học liệu đang mở.` }); focusMain(); }
       else { patch({ screen: result.status === "insufficient_content" ? "insufficient" : result.status === "out_of_scope" ? "rejected" : "error", errorMessage: result.reason }); focusMain(); }
     } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) { patch({ screen: "error", errorMessage: error instanceof Error ? error.message : "Không thể tạo câu hỏi lúc này." }); focusMain(); } } finally { controller.current = null; }
@@ -95,9 +97,9 @@ export function VLearnWorkbench({ courseId, lectureId, materialId, slideCatalog,
     <a className="skip-link" href="#main-content">Bỏ qua điều hướng</a>
     <Header source={source} lectureId={lectureId} theme={state.theme} drawer={drawer} onBack={() => state.screen === "lesson" ? patch({ notice: "Bạn đang ở học liệu hiện tại." }) : backToLesson()} onTheme={() => patch({ theme: state.theme === "light" ? "dark" : "light" })} onPanel={toggle} />
     <div className="workspace">
-      <Materials source={source} files={slideCatalog} collapsed={lessonCollapsed} drawerOpen={drawer === "materials"} onToggle={() => toggle("materials")} onSelect={(fileName) => { patch({ selectedSourceFile: fileName, currentPage: 1, screen: "lesson", answers: {} }); setDrawer(null); }} />
+      <Materials source={source} files={slideCatalog} collapsed={lessonCollapsed} drawerOpen={drawer === "materials"} onToggle={() => toggle("materials")} onSelect={(fileName) => { patch({ selectedSourceFile: fileName, currentPage: 1, screen: "lesson", answers: {}, submittedQuestions: {} }); setDrawer(null); }} />
       <div className="resize-handle" role="separator" tabIndex={0} aria-label="Đổi độ rộng học liệu" onPointerDown={(event) => resize("materials", event)} onKeyDown={(event) => resizeKeys("materials", event)} />
-      <main id="main-content" className="study-main" tabIndex={-1}>{state.screen === "lesson" ? <Reader state={state} source={source} sourceUrl={sourceUrl} onPatch={patch} /> : <Flow state={state} source={source} onAnswer={(id, value) => patch({ answers: { ...state.answers, [id]: value } })} onMove={(amount) => patch({ currentQuestionIndex: Math.max(0, Math.min(state.generatedQuestions.length - 1, state.currentQuestionIndex + amount)) })} onBack={backToLesson} onGenerate={generate} onComplete={complete} onRetake={retake} onFlag={(id, reason) => patch({ flagged: { ...state.flagged, [id]: reason }, feedbackOpenFor: null })} onOpenConfig={() => patch({ studyCardExpanded: true })} />}</main>
+      <main id="main-content" className="study-main" tabIndex={-1}>{state.screen === "lesson" ? <Reader state={state} source={source} sourceUrl={sourceUrl} onPatch={patch} /> : <Flow state={state} source={source} onAnswer={(id, value) => patch({ answers: { ...state.answers, [id]: value } })} onSubmitAnswer={(id) => patch({ submittedQuestions: { ...state.submittedQuestions, [id]: true } })} onMove={(amount) => patch({ currentQuestionIndex: Math.max(0, Math.min(state.generatedQuestions.length - 1, state.currentQuestionIndex + amount)) })} onBack={backToLesson} onGenerate={generate} onComplete={complete} onRetake={retake} onFlag={(id, reason) => patch({ flagged: { ...state.flagged, [id]: reason }, feedbackOpenFor: null })} onOpenConfig={() => patch({ studyCardExpanded: true })} />}</main>
       <div className="resize-handle" role="separator" tabIndex={0} aria-label="Đổi độ rộng VLearn Tutor" onPointerDown={(event) => resize("tutor", event)} onKeyDown={(event) => resizeKeys("tutor", event)} />
       <Tutor state={state} source={source} collapsed={tutorCollapsed} drawerOpen={drawer === "tutor"} onToggle={() => toggle("tutor")} onGenerate={generate} onPatch={patch} onReview={(attempt) => { patch({ screen: "review", generatedQuestions: attempt.questions, answers: attempt.answers, flagged: attempt.flagged, selectedSourceFile: attempt.sourceFileName }); setDrawer(null); focusMain(); }} />
     </div>
@@ -147,6 +149,7 @@ function Flow({
   state,
   source,
   onAnswer,
+  onSubmitAnswer,
   onMove,
   onBack,
   onGenerate,
@@ -158,6 +161,7 @@ function Flow({
   state: DemoState;
   source: SlideCatalogEntry;
   onAnswer: (id: string, value: string) => void;
+  onSubmitAnswer: (id: string) => void;
   onMove: (amount: number) => void;
   onBack: (page?: number) => void;
   onGenerate: () => void;
@@ -208,6 +212,7 @@ function Flow({
     const question = state.generatedQuestions[state.currentQuestionIndex];
     if (!question) return null;
     const selected = state.answers[question.id];
+    const submitted = Boolean(state.submittedQuestions[question.id]);
     const last = state.currentQuestionIndex === state.generatedQuestions.length - 1;
     return (
       <Quiz
@@ -215,7 +220,9 @@ function Flow({
         index={state.currentQuestionIndex}
         total={state.generatedQuestions.length}
         selected={selected}
+        submitted={submitted}
         onAnswer={onAnswer}
+        onSubmit={() => onSubmitAnswer(question.id)}
         onPrevious={() => onMove(-1)}
         onNext={() => (last ? onComplete() : onMove(1))}
       />
@@ -261,7 +268,69 @@ function Flow({
     </section>
   );
 }
-function Quiz({ question, index, total, selected, onAnswer, onPrevious, onNext }: { question: QuizQuestion; index: number; total: number; selected?: string; onAnswer: (id: string, value: string) => void; onPrevious: () => void; onNext: () => void }) { return <section className="flow quiz-flow"><div className="quiz-progress"><span>Tự kiểm tra</span><strong>Câu {index + 1} / {total}</strong></div><span className="flow-kicker">Nhớ lại ý chính</span><h1>{question.prompt}</h1><fieldset><legend className="sr-only">Chọn một đáp án</legend>{question.choices.map((choice, index) => <label className={selected === choice.id ? "selected" : ""} key={choice.id}><input type="radio" name="answer" checked={selected === choice.id} onChange={() => onAnswer(question.id, choice.id)} /><span>{String.fromCharCode(65 + index)}</span>{choice.label}</label>)}</fieldset><div className="flow-actions">{index ? <button className="text-button" type="button" onClick={onPrevious}>Câu trước</button> : <span /> }<button className="primary-button" type="button" disabled={!selected} onClick={onNext}>{index === total - 1 ? "Nộp bài" : "Tiếp tục"}</button></div></section>; }
+function Quiz({
+  question,
+  index,
+  total,
+  selected,
+  submitted,
+  onAnswer,
+  onSubmit,
+  onPrevious,
+  onNext,
+}: {
+  question: QuizQuestion;
+  index: number;
+  total: number;
+  selected?: string;
+  submitted: boolean;
+  onAnswer: (id: string, value: string) => void;
+  onSubmit: () => void;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  const correctChoice = question.choices.find((choice) => choice.id === question.correctChoiceId);
+  const isCorrect = selected === question.correctChoiceId;
+
+  return (
+    <section className="flow quiz-flow">
+      <div className="quiz-progress"><span>Tự kiểm tra</span><strong>Câu {index + 1} / {total}</strong></div>
+      <span className="flow-kicker">Nhớ lại ý chính</span>
+      <h1>{question.prompt}</h1>
+      <fieldset disabled={submitted}>
+        <legend className="sr-only">Chọn một đáp án</legend>
+        {question.choices.map((choice, choiceIndex) => {
+          const classes = [
+            selected === choice.id ? "selected" : "",
+            submitted && choice.id === question.correctChoiceId ? "is-correct" : "",
+            submitted && selected === choice.id && !isCorrect ? "is-incorrect" : "",
+          ].filter(Boolean).join(" ");
+
+          return (
+            <label className={classes} key={choice.id}>
+              <input type="radio" name="answer" checked={selected === choice.id} onChange={() => onAnswer(question.id, choice.id)} />
+              <span>{String.fromCharCode(65 + choiceIndex)}</span>
+              {choice.label}
+            </label>
+          );
+        })}
+      </fieldset>
+      {submitted && (
+        <div className={`answer-feedback ${isCorrect ? "is-correct" : "is-incorrect"}`} role="status" aria-live="polite">
+          <strong>{isCorrect ? <CheckCircle size={20} /> : <X size={20} />}{isCorrect ? "Chính xác" : "Chưa chính xác"}</strong>
+          <p><b>Đáp án đúng:</b> {correctChoice?.label}</p>
+          <p>{question.explanation}</p>
+        </div>
+      )}
+      <div className="flow-actions">
+        {index ? <button className="text-button" type="button" onClick={onPrevious}>Câu trước</button> : <span />}
+        {!submitted
+          ? <button className="primary-button" type="button" disabled={!selected} onClick={onSubmit}>Nộp đáp án</button>
+          : <button className="primary-button" type="button" onClick={onNext}>{index === total - 1 ? "Xem kết quả" : "Câu tiếp theo"}</button>}
+      </div>
+    </section>
+  );
+}
 function ReviewWithRetake({ state, source, onBack, onRetake, onFlag }: { state: DemoState; source: SlideCatalogEntry; onBack: (page?: number) => void; onRetake: () => void; onFlag: (id: string, reason: string) => void }) {
   const score = scoreQuiz(state.generatedQuestions, state.answers);
   const priorities = reviewPriorities(state.generatedQuestions, state.answers);

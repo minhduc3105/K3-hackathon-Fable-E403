@@ -20,12 +20,12 @@
 
 | Họ tên            | Mã học viên   | Phần phụ trách                                             | Artifact giải thích được                                                                                         |
 | ----------------- | ------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Lã Minh Đức       | `23020526`    | Product UI, CP2, React migration và accessibility          | `codebase/src/features/quiz-from-slides/components/`, `codebase/src/styles/app.css`, commit `35983a8`, `d92c76e` |
+| Lã Minh Đức       | `2A202601261` | Product UI, CP2, React migration và accessibility          | `codebase/src/features/quiz-from-slides/components/`, `codebase/src/styles/app.css`, commit `35983a8`, `d92c76e` |
 | Lâm Việt Hoàng    | `2A202601067` | Prototype flow, quiz components và state model             | Nhánh `hoang`, commit `1d96398`, `a97f197`                                                                       |
 | Phó Viết Tiến Anh | `2A202601341` | Tích hợp CP3, AI flow và khung demo                        | Nhánh `tienanh`, commit `880e17d`                                                                                |
 | Trần Huy Hoàng    | `2A202601709` | OpenRouter, golden set, eval runner, spec và tích hợp cuối | `codebase/app/api/quiz/`, `eval/`, `spec.md`, commit `4ea9c42`                                                   |
 
-Mã `23020526` của Lã Minh Đức được đối chiếu từ email commit Git. Mã `2A202601709` của Trần Huy Hoàng do thành viên xác nhận.
+Mã `2A202601261` của Lã Minh Đức và mã `2A202601709` của Trần Huy Hoàng do thành viên xác nhận.
 
 ### Willing users dự kiến
 
