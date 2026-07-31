@@ -1,6 +1,6 @@
 # Reflection cá nhân
 
-Mỗi thành viên sao chép `TEMPLATE.md` thành một file riêng, ví dụ `23020526-la-minh-duc.md`.
+Mỗi thành viên sao chép `TEMPLATE.md` thành một file riêng, ví dụ `2A202601261-la-minh-duc.md`.
 
 Mỗi reflection phải do chính thành viên xác nhận và giải thích được khi TA hỏi:
 

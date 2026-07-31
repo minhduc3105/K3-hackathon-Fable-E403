@@ -68,13 +68,13 @@ Hai file trong `data/vlearn-pack/slides` do ban tổ chức cấp được đọ
 
 1. UI gửi tên học liệu, số câu, `quizDifficulty`, `learnerInstructions`, nonce mới và tối đa 80 prompt đã dùng.
 2. Route lấy text có nhãn slide từ nguồn đang mở. Yêu cầu riêng của người học và source được đặt ở hai khối tách biệt để source không thể ghi đè nhiệm vụ.
-3. Provider chạy guardrail cho `learnerInstructions`: prompt generic như “tạo câu hỏi” vẫn hợp lệ, nhưng prompt lạc đề/không bám học liệu như “tạo câu hỏi cho con chó” trả `out_of_scope` và không tạo quiz.
-4. OpenRouter nhận system prompt bắt buộc áp dụng yêu cầu về chủ đề, độ khó và cách hỏi khi có căn cứ trong source. `easy` hỏi trực tiếp, `medium` cân bằng hiểu ý chính, `hard` thiên về vận dụng/so sánh nhưng vẫn chỉ dùng source.
-5. Response phải có đúng số câu, đúng bốn lựa chọn, một đáp án đúng, excerpt nguyên văn và số slide hợp lệ. Output sai hoặc lặp được retry tối đa ba lần.
-6. Nếu thiếu API key, provider lỗi, JSON sai, grounding fail hoặc tiếp tục lặp, server dùng `grounded-quiz-fallback.ts` để tạo một bộ MCQ mới trực tiếp từ các excerpt. Chế độ này vẫn giữ bốn lựa chọn, nguồn slide, độ khó đã chọn và ưu tiên nội dung khớp yêu cầu riêng.
-7. Prompt của quiz mới được lưu trong `sessionStorage` theo từng học liệu để lần tạo tiếp theo tránh dùng lại.
+3. Provider chạy guardrail cho `learnerInstructions`: mọi yêu cầu học tập an toàn như “lịch sử về AI” đều được chuyển tiếp dù không trùng từ khóa tuyệt đối với học liệu. Chỉ prompt injection, yêu cầu bỏ qua nguồn hoặc thao tác ngoài chức năng tạo quiz mới trả `out_of_scope`.
+4. Server lọc source theo phần muốn ôn trước khi gọi OpenRouter. Ví dụ “lịch sử về AI” trên Day 1 chỉ dùng các mốc lịch sử ở trang 5–9; cùng prompt trên Day 2 trả `insufficient_content` thay vì tạo câu lạc đề. `easy` hỏi trực tiếp, `medium` cân bằng hiểu ý chính, `hard` thiên về vận dụng/so sánh nhưng vẫn chỉ dùng source.
+5. Response phải có đúng số câu, đúng bốn lựa chọn, một đáp án đúng, excerpt nguyên văn và số slide hợp lệ. Bộ kiểm tra loại cả câu trùng nguyên văn lẫn câu đổi cách diễn đạt nhưng vẫn hỏi lại cùng khái niệm; khi nguồn đủ rộng, các câu trong cùng bộ phải dùng các excerpt khác nhau. Output sai hoặc lặp được retry tối đa ba lần.
+6. Nếu thiếu API key, provider lỗi, JSON sai, grounding fail hoặc tiếp tục lặp, server dùng `grounded-quiz-fallback.ts` để tạo một bộ MCQ mới trực tiếp từ các excerpt. Chế độ này vẫn giữ bốn lựa chọn, nguồn slide, độ khó đã chọn, ưu tiên nội dung khớp yêu cầu riêng và chọn chủ đề chưa xuất hiện trong lịch sử trước.
+7. Prompt và excerpt đã dùng được lưu trong `sessionStorage` theo từng học liệu. Lần tạo tiếp theo loại các excerpt cũ, đồng thời phân bổ câu hỏi qua các trang khác nhau khi nguồn còn đủ nội dung.
 
-Với học liệu đã trích xuất được text và prompt hợp lệ, API luôn trả một quiz `ready`; lỗi provider không còn đẩy người học sang màn hình lỗi. Nếu file không có bất kỳ text nào, route vẫn trả `insufficient_content`; nếu prompt riêng lạc đề, route trả `out_of_scope` để UI hiển thị nhánh từ chối.
+Với học liệu đã trích xuất được text và prompt hợp lệ, API luôn trả một quiz `ready`; lỗi provider không còn đẩy người học sang màn hình lỗi. Nếu file không có bất kỳ text nào, route vẫn trả `insufficient_content`; prompt chỉ bị từ chối khi cố vượt quy tắc an toàn hoặc yêu cầu một thao tác không thuộc chức năng tạo quiz.
 
 Sao chép `.env.example` thành `.env.local` và điền `OPENROUTER_API_KEY`. Không commit file `.env.local`.
 

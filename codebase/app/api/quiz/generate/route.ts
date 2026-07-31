@@ -112,6 +112,7 @@ export async function POST(request: Request) {
       traceId,
       generationNonce,
       previousQuestionPrompts,
+      enforceLearnerFocus: Boolean(controlledSource),
     });
 
     const status = result.status === "generation_failed" ? 502 : result.status === "out_of_scope" ? 422 : 200;

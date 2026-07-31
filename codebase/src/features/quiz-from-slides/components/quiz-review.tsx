@@ -136,7 +136,7 @@ function ReviewItem({
                 <span className="font-medium">Nguồn: </span>
                 <span>Slide {question.source.pageOrSlide}</span>
                 <p className="text-gray-500 mt-1 italic">
-                  "{question.source.excerpt}"
+                  &ldquo;{question.source.excerpt}&rdquo;
                 </p>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import type { GenerateQuizResult, QuizChoice, QuizQuestion } from "../model/types";
+import { meaningfulQuizTokens, promptAppearsInHistory } from "./quiz-novelty";
 
 type GroundedFallbackInput = {
   sourceText: string;
@@ -24,57 +25,36 @@ const stopWords = new Set([
 ]);
 
 const promptTemplates = [
-  (slide: number) => `Theo slide ${slide}, nhận định nào dưới đây được nêu trong học liệu?`,
-  (slide: number) => `Nội dung nào phản ánh đúng ý chính được trình bày ở slide ${slide}?`,
-  (slide: number) => `Khi đối chiếu với slide ${slide}, lựa chọn nào khớp với tài liệu?`,
-  (slide: number) => `Ý nào là căn cứ xuất hiện tại slide ${slide}?`,
-  (slide: number) => `Điểm cần ghi nhớ từ slide ${slide} là gì?`,
-  (slide: number) => `Phát biểu nào mô tả chính xác nội dung của slide ${slide}?`,
-  (slide: number) => `Nếu ôn lại slide ${slide}, người học cần chọn kết luận nào?`,
-  (slide: number) => `Thông tin nào thuộc slide ${slide}, thay vì các phần còn lại của bài?`,
-  (slide: number) => `Slide ${slide} cung cấp căn cứ cho phát biểu nào?`,
-  (slide: number) => `Đâu là cách diễn đạt phù hợp nhất với ý được nêu ở slide ${slide}?`,
-  (slide: number) => `Trong bài học, nội dung gắn với slide ${slide} là lựa chọn nào?`,
-  (slide: number) => `Khi kiểm tra lại nguồn ở slide ${slide}, phát biểu nào được xác nhận?`,
-  (slide: number) => `Nhận định nào có thể truy ngược trực tiếp về slide ${slide}?`,
-  (slide: number) => `Nếu chỉ dựa vào slide ${slide}, câu trả lời phù hợp là gì?`,
-  (slide: number) => `Đâu là thông tin slide ${slide} thực sự cung cấp?`,
-  (slide: number) => `Phần kiến thức ở slide ${slide} hỗ trợ lựa chọn nào?`,
-  (slide: number) => `Kết luận nào không vượt quá căn cứ tại slide ${slide}?`,
-  (slide: number) => `Khi tóm lược riêng slide ${slide}, ý nào phải được giữ lại?`,
-  (slide: number) => `Lựa chọn nào nêu đúng điều người học vừa đọc ở slide ${slide}?`,
-  (slide: number) => `Đâu là phát biểu có nguồn đối chiếu tại slide ${slide}?`,
-  (slide: number) => `Thông tin cốt lõi được ghi nhận ở slide ${slide} là gì?`,
-  (slide: number) => `Nếu cần dẫn lại slide ${slide}, nội dung nào là chính xác?`,
-  (slide: number) => `Câu nào bám sát nhất vào dữ liệu của slide ${slide}?`,
-  (slide: number) => `Ý nào thuộc phạm vi kiến thức được slide ${slide} xác nhận?`,
+  (topic: string) => `Phát biểu nào mô tả đúng về ${topic}?`,
+  (topic: string) => `${topic} được giải thích đúng nhất qua lựa chọn nào?`,
+  (topic: string) => `Đâu là cách hiểu chính xác về ${topic}?`,
+  (topic: string) => `Điểm nào cần ghi nhớ về ${topic}?`,
+  (topic: string) => `Vai trò của ${topic} được thể hiện như thế nào?`,
+  (topic: string) => `Kết luận nào mô tả chính xác ${topic}?`,
+  (topic: string) => `Nhận định nào không làm sai lệch kiến thức về ${topic}?`,
+  (topic: string) => `Thông tin nào về ${topic} là chính xác?`,
+  (topic: string) => `Ý nghĩa của ${topic} là gì?`,
+  (topic: string) => `Lựa chọn nào phân biệt đúng ${topic}?`,
 ] as const;
 
 const applicationPromptTemplates = [
-  (slide: number) => `Khi cần vận dụng ý ở slide ${slide}, căn cứ nào dưới đây phù hợp với học liệu?`,
-  (slide: number) => `Để ra quyết định dựa trên slide ${slide}, người học nên dùng nhận định nào?`,
-  (slide: number) => `Trong một bài tập áp dụng nội dung slide ${slide}, phát biểu nào là căn cứ đúng?`,
-  (slide: number) => `Khi phân tích một tình huống theo slide ${slide}, thông tin nào cần được giữ nguyên?`,
-  (slide: number) => `Lựa chọn nào có thể dùng để giải thích một tình huống bằng ý ở slide ${slide}?`,
-  (slide: number) => `Nếu phải áp dụng nội dung slide ${slide}, đâu là điểm xuất phát có căn cứ?`,
-  (slide: number) => `Trong bước vận dụng kiến thức ở slide ${slide}, nhận định nào khớp với nguồn?`,
-  (slide: number) => `Để tránh suy diễn ngoài slide ${slide}, người học cần chọn thông tin nào?`,
-  (slide: number) => `Khi giải một trường hợp dựa trên slide ${slide}, ý nào được tài liệu hỗ trợ?`,
-  (slide: number) => `Căn cứ nào từ slide ${slide} phù hợp nhất cho một câu hỏi vận dụng?`,
-  (slide: number) => `Nếu cần minh họa ý của slide ${slide}, phát biểu nào vẫn đúng theo nguồn?`,
-  (slide: number) => `Trong một tình huống mới, nội dung nào có thể truy ngược về slide ${slide}?`,
-  (slide: number) => `Khi xử lý một trường hợp theo slide ${slide}, lựa chọn nào giữ đúng căn cứ?`,
-  (slide: number) => `Để áp dụng mà không bịa thêm từ slide ${slide}, nên bắt đầu với ý nào?`,
-  (slide: number) => `Trong bước phân tích dựa trên slide ${slide}, dữ kiện nào là hợp lệ?`,
-  (slide: number) => `Nếu một quyết định cần viện dẫn slide ${slide}, phát biểu nào dùng được?`,
-  (slide: number) => `Khi chuyển ý ở slide ${slide} thành hành động, căn cứ đúng là gì?`,
-  (slide: number) => `Để kiểm tra một ví dụ bằng slide ${slide}, nhận định nào nên được đối chiếu?`,
-  (slide: number) => `Trong bài tập tình huống về slide ${slide}, đâu là thông tin không bị suy diễn?`,
-  (slide: number) => `Khi đánh giá một trường hợp mới, ý nào từ slide ${slide} còn nguyên giá trị?`,
-  (slide: number) => `Đâu là căn cứ của slide ${slide} có thể mang sang bước vận dụng?`,
-  (slide: number) => `Nếu cần lập luận theo slide ${slide}, người học nên chọn dữ kiện nào?`,
-  (slide: number) => `Trong một quyết định thực tế, nội dung nào bám đúng slide ${slide}?`,
-  (slide: number) => `Khi giải thích một ví dụ bằng slide ${slide}, phát biểu nào có nguồn?`,
+  (topic: string) => `Trong một tình huống thực tế, ${topic} nên được vận dụng như thế nào?`,
+  (topic: string) => `Cách xử lý nào áp dụng đúng kiến thức về ${topic}?`,
+  (topic: string) => `Khi phân tích một trường hợp mới bằng ${topic}, dữ kiện nào cần được giữ nguyên?`,
+  (topic: string) => `Lựa chọn nào tránh hiểu sai ${topic}?`,
+  (topic: string) => `Đâu là ví dụ vận dụng đúng ${topic}?`,
+  (topic: string) => `Khi ra quyết định dựa trên ${topic}, đâu là căn cứ phù hợp?`,
+  (topic: string) => `Hành động nào nhất quán với kiến thức về ${topic}?`,
+  (topic: string) => `Trong tình huống mới, nhận định nào về ${topic} vẫn đúng?`,
+  (topic: string) => `Lựa chọn nào áp dụng ${topic} mà không làm thay đổi ý nghĩa?`,
+  (topic: string) => `Cách giải thích nào về ${topic} phù hợp nhất?`,
+] as const;
+
+const lastResortPromptTemplates = [
+  (topic: string) => `Sai lệch nào cần tránh khi hiểu về ${topic}?`,
+  (topic: string) => `Trong thực tế, nhận định nào về ${topic} vẫn chính xác?`,
+  (topic: string) => `Mối liên hệ cốt lõi của ${topic} được giải thích đúng như thế nào?`,
+  (topic: string) => `Khi vận dụng ${topic}, lựa chọn nào phù hợp nhất?`,
 ] as const;
 
 function normalize(value: string) {
@@ -95,8 +75,7 @@ function tokenSet(value: string) {
 }
 
 function isRepeatedPrompt(prompt: string, previousPrompts: string[]) {
-  const normalizedPrompt = normalize(prompt);
-  return previousPrompts.some((previous) => normalizedPrompt === normalize(previous));
+  return promptAppearsInHistory(prompt, previousPrompts);
 }
 
 function looksLikeDocumentInstruction(excerpt: string) {
@@ -131,7 +110,23 @@ function instructionKeywords(value: string) {
     .slice(0, 10);
 }
 
-function rankUnits(units: SourceUnit[], learnerInstructions: string, seed: number) {
+function topicWasUsed(unit: SourceUnit, previousPrompts: string[]) {
+  const topicTokens = meaningfulQuizTokens(topicFromExcerpt(unit.excerpt));
+  if (!topicTokens.size) return false;
+
+  return previousPrompts.some((prompt) => {
+    const promptTokens = meaningfulQuizTokens(prompt);
+    const shared = [...topicTokens].filter((token) => promptTokens.has(token)).length;
+    return shared > 0 && shared / Math.min(topicTokens.size, promptTokens.size || 1) >= 0.6;
+  });
+}
+
+function rankUnits(
+  units: SourceUnit[],
+  learnerInstructions: string,
+  previousPrompts: string[],
+  seed: number,
+) {
   const keywords = instructionKeywords(learnerInstructions);
   const requestedSlides = new Set(
     [...learnerInstructions.matchAll(/(?:slide|trang)\s*(\d+)/gi)].map((match) => Number(match[1])),
@@ -144,20 +139,25 @@ function rankUnits(units: SourceUnit[], learnerInstructions: string, seed: numbe
       score: (requestedSlides.has(unit.pageOrSlide) ? 100 : 0) + keywords.reduce(
         (total, keyword) => total + (normalize(unit.excerpt).includes(keyword) ? 10 : 0),
         0,
-      ),
+      ) - (topicWasUsed(unit, previousPrompts) ? 30 : 0),
       tieBreaker: hash(`${seed}:${unit.pageOrSlide}:${unit.excerpt}`),
     }))
     .sort((left, right) => right.score - left.score || left.tieBreaker - right.tieBreaker || left.index - right.index)
     .map(({ unit }) => unit);
 }
 
-function focusLabel(learnerInstructions: string, unit: SourceUnit) {
-  const requested = instructionKeywords(learnerInstructions);
-  const matched = requested.find((keyword) => normalize(unit.excerpt).includes(keyword));
-  if (matched) return matched;
+function topicFromExcerpt(excerpt: string) {
+  const cleaned = excerpt.replace(/[“”"]/g, "").replace(/\s+/g, " ").trim().replace(/[.!?]+$/, "");
+  const conditional = cleaned.match(/^(?:Với|Khi)\s+([^,]{3,80}),/i)?.[1];
+  if (conditional) return conditional.trim();
 
-  return [...tokenSet(unit.excerpt)]
-    .find((token) => token.length >= 5 && !stopWords.has(token));
+  const recommendation = cleaned.match(/^Nên\s+(.+?)\s+(?:theo|để|thay vì)\b/i)?.[1];
+  if (recommendation) return recommendation.trim();
+
+  const subject = cleaned.match(/^(.{2,80}?)\s+(?:giúp|giới hạn|cho phép|tạo|phù hợp|tìm|tập trung|luôn hỏi|phải|nên|mô tả|đảm bảo|yêu cầu)\b/i)?.[1];
+  if (subject) return subject.trim();
+
+  return cleaned.split(/\s+/).slice(0, 6).join(" ");
 }
 
 function buildPrompt(
@@ -167,7 +167,7 @@ function buildPrompt(
   seed: number,
   blockedPrompts: string[],
 ) {
-  const focus = focusLabel(learnerInstructions, unit);
+  const topic = topicFromExcerpt(unit.excerpt);
   const normalizedInstructions = normalize(learnerInstructions);
   const applicationMode = /(vận dụng|phân tích|tình huống|khó|application)/i.test(normalizedInstructions);
   const templates = difficulty === "easy"
@@ -178,16 +178,12 @@ function buildPrompt(
 
   for (let offset = 0; offset < templates.length; offset += 1) {
     const template = templates[(seed + offset) % templates.length];
-    const basePrompt = template(unit.pageOrSlide);
-    const candidate = focus
-      ? `${basePrompt} Trọng tâm: ${focus}.`
-      : basePrompt;
+    const candidate = template(topic);
 
     if (!isRepeatedPrompt(candidate, blockedPrompts)) return candidate;
   }
 
-  const variant = (seed % 97) + 1;
-  return `Ở lượt ôn tập ${variant}, thông tin nào được slide ${unit.pageOrSlide} xác nhận?${focus ? ` Trọng tâm: ${focus}.` : ""}`;
+  return lastResortPromptTemplates[Math.abs(seed) % lastResortPromptTemplates.length](topic);
 }
 
 function seededShuffle<T>(values: T[], seed: number) {
@@ -205,9 +201,9 @@ function seededShuffle<T>(values: T[], seed: number) {
 
 function fallbackDistractors(correctExcerpt: string) {
   return [
-    `Học liệu không đưa ra nội dung cụ thể nào thay cho nhận định: “${correctExcerpt}”.`,
-    "Slide này chỉ nêu tiêu đề và không có kết luận cần ghi nhớ.",
-    "Tài liệu yêu cầu bỏ qua hoàn toàn nội dung của slide này.",
+    `Khái niệm này phủ định hoàn toàn nhận định: “${correctExcerpt}”.`,
+    "Cơ chế này luôn bảo đảm kết quả đúng mà không cần kiểm tra.",
+    "Nội dung này chỉ thay đổi hình thức hiển thị và không ảnh hưởng cách xử lý.",
   ];
 }
 
@@ -238,7 +234,7 @@ function buildQuestion(
       label,
     })) as [QuizChoice, QuizChoice, QuizChoice, QuizChoice],
     correctChoiceId: choiceIds[correctIndex],
-    explanation: `Slide ${unit.pageOrSlide} nêu trực tiếp: “${unit.excerpt}”`,
+    explanation: unit.excerpt,
     source: {
       pageOrSlide: unit.pageOrSlide,
       excerpt: unit.excerpt,
@@ -254,7 +250,12 @@ export function generateGroundedFallbackQuiz(
     ? units
     : [{ pageOrSlide: 1, excerpt: input.sourceText.replace(/\s+/g, " ").trim() }];
   const seed = hash(`${input.generationNonce}:${input.learnerInstructions ?? ""}:${input.difficulty}`);
-  const rankedUnits = rankUnits(safeUnits, input.learnerInstructions ?? "", seed);
+  const rankedUnits = rankUnits(
+    safeUnits,
+    input.learnerInstructions ?? "",
+    input.previousQuestionPrompts,
+    seed,
+  );
   const blockedPrompts = [...input.previousQuestionPrompts];
   const questions = Array.from({ length: input.questionCount }, (_, index) => buildQuestion(
     rankedUnits[index % rankedUnits.length],
